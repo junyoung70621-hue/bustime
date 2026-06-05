@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#A2324A",
+  themeColor: "#D60051",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover", // 노치/세이프에어리어 대응

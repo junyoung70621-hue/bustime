@@ -7,6 +7,7 @@
 //   - 남은 정류장 수 + ETA 대시보드
 // ─────────────────────────────────────────────────────────────
 import { useState } from "react";
+import Image from "next/image";
 import type { SearchResult } from "./api/bus/search/route";
 
 export default function Home() {
@@ -48,14 +49,16 @@ export default function Home() {
   return (
     <main className="safe-x safe-top safe-bottom mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col gap-5">
       {/* 헤더 / 브랜딩 */}
-      <header className="text-center">
-        <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-0">
-          <span className="text-[2rem] font-extrabold leading-tight tracking-tight text-brand-600 sm:text-4xl">
-            ATEC
-          </span>
-          <span className="text-xl font-bold text-slate-400 sm:text-2xl">에이텍모빌리티</span>
-        </div>
-        <p className="mt-1.5 text-sm font-semibold tracking-wide text-slate-400">
+      <header className="flex flex-col items-center text-center">
+        <Image
+          src="/atec-logo.png"
+          alt="ATEC 에이텍모빌리티"
+          width={3481}
+          height={315}
+          priority
+          className="h-8 w-auto sm:h-9"
+        />
+        <p className="mt-2.5 text-sm font-semibold tracking-wide text-slate-400">
           종점 도착 대시보드
         </p>
       </header>
