@@ -1,0 +1,55 @@
+name: 공공API 키 동기화 확인
+
+# 30분마다 공공 버스위치 API 키 상태를 확인하고,
+# 동기화(headerCd "0")되면 GitHub 이슈를 생성해 저장소 소유자에게 메일 알림.
+# 내 PC와 무관하게 GitHub 클라우드에서 동작.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # 30분마다 (UTC 기준)
+  workflow_dispatch: {} # 수동 실행 버튼
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: API 상태 확인
+        id: check
+        run: |
+          RESP=$(curl -sS -m 25 "http://ws.bus.go.kr/api/rest/buspos/getBusPosByRtid?serviceKey=${{ secrets.PUBLIC_DATA_API_KEY }}&busRouteId=100100118&resultType=json" || true)
+          echo "응답: $RESP"
+          CD=$(echo "$RESP" | grep -o '"headerCd":"[0-9]*"' | grep -o '[0-9]*' | head -1)
+          echo "headerCd=$CD"
+          echo "cd=$CD" >> "$GITHUB_OUTPUT"
+
+      - name: 동기화 완료 시 이슈 생성(메일 알림)
+        if: steps.check.outputs.cd == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # 이미 알림 이슈가 열려 있으면 중복 생성 방지
+          EXISTING=$(gh issue list --repo "$REPO" --state open --search "공공API 키 동기화 완료 in:title" --json number --jq 'length')
+          if [ "$EXISTING" != "0" ]; then
+            echo "이미 알림 이슈가 있습니다. 생략."
+            exit 0
+          fi
+          cat > /tmp/body.md <<EOF
+          @$OWNER 버스위치 API 키가 **동기화 완료**되었습니다 (headerCd=0).
+
+          - 이제 https://bustime-beta.vercel.app 에서 **실시간 위치가 자동 표시**됩니다 (새로고침만).
+          - ETA까지 완성하려면 로컬에서 **한 번만** 실행:
+            \`\`\`
+            node scripts/fill-last-seq.mjs
+            \`\`\`
+
+          확인 후 이 이슈는 닫으셔도 됩니다. (이슈가 열려 있는 동안은 중복 알림이 가지 않습니다.)
+          EOF
+          gh issue create --repo "$REPO" \
+            --title "✅ 공공API 키 동기화 완료!" \
+            --body-file /tmp/body.md
+          echo "알림 이슈 생성 완료"
