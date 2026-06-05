@@ -1,0 +1,25 @@
+/node_modules
+/.next
+/out
+/build
+
+# env
+.env
+.env.local
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.vercel
+next-env.d.ts
+
+# 회사 차량 데이터(이미 Supabase에 적재됨, 원본 .xls에서 재생성 가능)
+supabase/vehicles.csv
+supabase/routes.csv
+supabase/fill-last-seq.sql
+
+# Supabase CLI 로컬 캐시(내부 식별자/풀러 URL 포함)
+supabase/.temp/
+supabase/.branches/
