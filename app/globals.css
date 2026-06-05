@@ -3,9 +3,36 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+}
+
+html {
+  /* iOS 가로 회전 시 글자 크기 자동 확대 방지 */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  @apply bg-slate-950 text-slate-100;
+  @apply bg-canvas text-slate-800 antialiased;
+  /* 당겨서 새로고침/바운스 억제, 매끄러운 스크롤 */
+  overscroll-behavior-y: none;
+}
+
+/* 모바일 탭 하이라이트 제거 + 터치 반응성 */
+button,
+a,
+input,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 세이프에어리어(노치) 여백 유틸 */
+.safe-top {
+  padding-top: max(2rem, env(safe-area-inset-top));
+}
+.safe-bottom {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+.safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
