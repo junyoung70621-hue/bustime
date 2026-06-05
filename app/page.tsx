@@ -157,6 +157,9 @@ export default function Home() {
 
       <footer className="mt-auto pt-4 text-center text-xs text-slate-300">
         © ATEC Mobility · 티머니 단말기 A/S 지원
+        <a href="/admin" className="ml-2 underline decoration-slate-300 hover:text-slate-500">
+          관리자
+        </a>
       </footer>
     </main>
   );
