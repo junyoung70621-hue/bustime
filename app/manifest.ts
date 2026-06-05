@@ -8,9 +8,17 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "ATEC 종점도착",
     description: "차량번호 기반 종점 도착 시간(ETA) - 티머니 단말기 A/S 지원",
     start_url: "/",
+    scope: "/",
     display: "standalone",
+    orientation: "portrait",
     background_color: "#F4F3F8",
     theme_color: "#D60051",
     lang: "ko",
+    icons: [
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
   };
 }
