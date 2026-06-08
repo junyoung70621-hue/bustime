@@ -49,6 +49,8 @@ export const MODEL_TEMPLATES: Record<Model, ItemTemplate[]> = {
     { name: "운전자봉 (U형 , ㄱ형)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
     { name: "ㄷ자 봉", bigo: "* 승차단말기 설치 및 고정용", hasNewReused: true },
     { name: "표출기 브라켓 (힌지 포함)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
+    { name: "통합단말기 고정브라켓", bigo: "* 통합단말기 설치 및 고정용", hasNewReused: true },
+    { name: "통합단말기 커버", bigo: "* 통합단말기 커버", hasNewReused: true },
   ],
   B710: [
     { name: "통합단말기 전원 케이블 (일반 , 카운티용)", bigo: "* 차량메인전원 → 통합 전원 공급용", hasNewReused: false },
@@ -78,7 +80,7 @@ export const MODEL_TEMPLATES: Record<Model, ItemTemplate[]> = {
     { name: "ㄷ자 봉", bigo: "* 승차단말기 설치 및 고정용", hasNewReused: true },
     { name: "표출기 브라켓 (힌지 포함)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
     { name: "통합단말기 고정브라켓", bigo: "* 통합단말기 설치 및 고정용", hasNewReused: true },
-    { name: "통합단말기 백커버", bigo: "* 통합단말기 백커버", hasNewReused: true },
+    { name: "통합단말기 커버", bigo: "* 통합단말기 커버", hasNewReused: true },
   ],
 };
 
