@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
     const dl = await sb.storage.from(BUCKET).download(r.pdf_path);
     if (dl.error || !dl.data) continue;
     const buf = new Uint8Array(await dl.data.arrayBuffer());
-    let name = `${safe(r.operator || "체크리스트")} ${r.install_date || ""}`.trim() + ".pdf";
+    let name = `${safe(r.operator || "체크리스트")} 설치완료체크리스트_${r.install_date || ""}`.trim() + ".pdf";
     let n = 2;
-    while (used.has(name)) name = `${safe(r.operator || "체크리스트")} ${r.install_date || ""} (${n++}).pdf`;
+    while (used.has(name)) name = `${safe(r.operator || "체크리스트")} 설치완료체크리스트_${r.install_date || ""} (${n++}).pdf`;
     used.add(name);
     zip.file(name, buf);
   }

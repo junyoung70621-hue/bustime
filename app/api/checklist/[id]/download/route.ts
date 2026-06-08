@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "다운로드 비활성: SERVICE_ROLE_KEY 없음" }, { status: 503 });
   }
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
-  const filename = `${safe(data.operator || "체크리스트")} ${data.install_date || ""}`.trim() + ".pdf";
+  const filename = `${safe(data.operator || "체크리스트")} 설치완료체크리스트_${data.install_date || ""}`.trim() + ".pdf";
   const signed = await admin.storage.from(BUCKET).createSignedUrl(data.pdf_path, 60, { download: filename });
   if (signed.error || !signed.data) return NextResponse.json({ error: "서명 URL 생성 실패" }, { status: 500 });
   return NextResponse.redirect(signed.data.signedUrl);

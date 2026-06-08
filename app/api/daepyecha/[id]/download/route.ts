@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
   // 저장 파일명: "운수사명 날짜.pdf" (파일명 사용 불가 문자만 정리)
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
-  const filename = `${safe(data.operator || "확인서")} ${data.issued_date || ""}`.trim() + ".pdf";
+  const filename = `${safe(data.operator || "확인서")} 자재지급확인서_${data.issued_date || ""}`.trim() + ".pdf";
   const signed = await admin.storage
     .from(BUCKET)
     .createSignedUrl(data.pdf_path, 60, { download: filename });
