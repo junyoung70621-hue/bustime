@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+
+// 한글 폰트 self-host (PDF 캡처 시 글자 결정성 + 기기 무관 동일 렌더링)
+const noto = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-noto",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ATEC 종점 도착 대시보드",
@@ -26,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={noto.variable}>
       <body className="min-h-screen">{children}</body>
     </html>
   );

@@ -15,8 +15,15 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
   return (
     <div
       className="w-[794px] bg-white p-10 text-[13px] leading-relaxed text-slate-900"
-      style={{ fontFamily: "'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}
+      style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif" }}
     >
+      {/* 상단 로고 (원본 엑셀: 티머니 / ATEC mobility) */}
+      <div className="mb-3 flex items-center justify-between">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/tmoney-logo.png" alt="티머니" className="h-10 w-auto" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/atec-mobility.png" alt="ATEC mobility" className="h-5 w-auto" />
+      </div>
       <h1 className="mb-5 text-center text-2xl font-extrabold tracking-wide">{title}</h1>
 
       <div className="mb-2 flex flex-col gap-1 text-[14px]">
@@ -74,7 +81,9 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
         <div className="text-right text-[13px]">
           <p>* 지급 날짜</p>
           <p className="mt-1 font-bold">{formatDate(data.issuedDate)}</p>
-          <p className="mt-4 text-[12px] text-slate-500">센터: {data.center}</p>
+          <p className="mt-4 text-[13px] font-bold text-slate-700">
+            {data.center ? `${data.center}센터` : ""}
+          </p>
         </div>
       </div>
     </div>
@@ -85,7 +94,7 @@ function SignLine({ label, name, sig }: { label: string; name: string; sig: stri
   return (
     <div className="flex items-center gap-3">
       <span className="font-bold">{label}</span>
-      <span className="min-w-[80px] border-b border-slate-500 px-2 text-center">{name || " "}</span>
+      <span className="min-w-[90px] border-b border-slate-500 px-2 text-center font-bold">{name || " "}</span>
       <span className="relative inline-flex h-12 w-28 items-center justify-center">
         {sig ? (
           // eslint-disable-next-line @next/next/no-img-element

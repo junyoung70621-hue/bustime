@@ -15,6 +15,8 @@ body {
   @apply bg-canvas text-slate-800 antialiased;
   /* 당겨서 새로고침/바운스 억제, 매끄러운 스크롤 */
   overscroll-behavior-y: none;
+  /* 한글 폰트(self-host Noto Sans KR) — PDF 캡처 글자 결정성 확보 */
+  font-family: var(--font-noto), "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
 }
 
 /* 모바일 탭 하이라이트 제거 + 터치 반응성 */
