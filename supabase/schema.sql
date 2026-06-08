@@ -61,14 +61,27 @@ create table if not exists public.daepyecha_confirmations (
   vehicle_count   int  not null default 0,
   vehicle_numbers text not null default '',
   items           jsonb not null default '[]'::jsonb, -- [{name,bigo,qty,newReused?}]
+  etc             text not null default '',  -- 기타사항(표 13번 행)
   receiver_name   text not null default '',  -- 인수자(운수회사) 정자명
   transferor_name text not null default '',  -- 인계자(자사) 정자명
   issued_date     date not null,
   pdf_path        text not null,             -- Storage 내 경로
-  created_at      timestamptz not null default now()
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(), -- 최종수정일(사이트에만 표기, PDF 미포함)
+  modified_by     text not null default '',  -- 수정자명(수정 시 필수)
+  deleted_at      timestamptz                -- 휴지통: null=정상, 값 있으면 휴지통
 );
 create index if not exists idx_dpc_center  on public.daepyecha_confirmations (center);
 create index if not exists idx_dpc_created on public.daepyecha_confirmations (created_at desc);
+create index if not exists idx_dpc_issued  on public.daepyecha_confirmations (issued_date desc);
+create index if not exists idx_dpc_deleted on public.daepyecha_confirmations (deleted_at);
+
+-- 기존 테이블이 이미 있는 경우(컬럼 추가 마이그레이션):
+alter table public.daepyecha_confirmations
+  add column if not exists etc         text not null default '',
+  add column if not exists updated_at  timestamptz not null default now(),
+  add column if not exists modified_by text not null default '',
+  add column if not exists deleted_at  timestamptz;
 
 alter table public.daepyecha_confirmations enable row level security;
 drop policy if exists "read dpc" on public.daepyecha_confirmations;

@@ -15,14 +15,23 @@ export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
     }
   }
 
+  // 모바일 화면 폭이 794px보다 좁아도 폼이 찌그러지지 않도록
+  // 캡처 폭/창 폭을 폼 실제 폭(794px)으로 고정한다.
+  const targetW = node.scrollWidth || 794;
+  const targetH = node.scrollHeight;
+
   const canvas = await html2canvas(node, {
     scale: 2,
     backgroundColor: "#ffffff",
     useCORS: true,
     logging: false,
+    width: targetW,
+    height: targetH,
+    windowWidth: targetW,
+    windowHeight: targetH,
   });
 
-  const img = canvas.toDataURL("image/jpeg", 0.92);
+  const img = canvas.toDataURL("image/jpeg", 0.95);
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
   const pageW = 210;

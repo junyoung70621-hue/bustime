@@ -12,6 +12,9 @@ import SignaturePad from "./SignaturePad";
 export default function Step2Sign({
   data,
   previewRef,
+  isEdit,
+  modifiedBy,
+  onModifiedBy,
   onSetReceiver,
   onSetTransferor,
   onBack,
@@ -21,6 +24,9 @@ export default function Step2Sign({
 }: {
   data: FormState;
   previewRef: React.RefObject<HTMLDivElement>;
+  isEdit: boolean;
+  modifiedBy: string;
+  onModifiedBy: (v: string) => void;
   onSetReceiver: (name: string, sig: string) => void;
   onSetTransferor: (name: string, sig: string) => void;
   onBack: () => void;
@@ -32,6 +38,20 @@ export default function Step2Sign({
 
   return (
     <div className="flex flex-col gap-3">
+      {isEdit && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <label className="mb-1 block text-sm font-bold text-amber-800">수정자명 (필수)</label>
+          <input
+            value={modifiedBy}
+            onChange={(e) => onModifiedBy(e.target.value)}
+            placeholder="수정하는 사람 이름"
+            className="h-11 w-full rounded-lg border border-amber-300 px-3 text-base outline-none focus:border-amber-500"
+          />
+          <p className="mt-1.5 text-xs text-amber-700">
+            * 수정 시 서명은 다시 입력해야 합니다. 최종수정일은 목록에만 표시됩니다.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <SignButton
           label="인수자 (운수회사)"

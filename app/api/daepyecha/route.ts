@@ -28,18 +28,33 @@ function adminClient() {
   }
 }
 
-// 목록 조회
+// 목록 조회 (검색/기간/휴지통 필터)
+//   ?center= 센터 / ?q= 운수사·차량번호 검색 / ?from=&to= 지급일 기간 / ?trashed=1 휴지통
 export async function GET(req: NextRequest) {
-  const center = req.nextUrl.searchParams.get("center");
+  const sp = req.nextUrl.searchParams;
+  const center = sp.get("center");
+  const q = (sp.get("q") ?? "").trim();
+  const from = sp.get("from");
+  const to = sp.get("to");
+  const trashed = sp.get("trashed") === "1";
+
   const sb = getSupabase();
   let query = sb
     .from("daepyecha_confirmations")
     .select(
-      "id, center, operator, office_type, model, purpose, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at",
+      "id, center, operator, office_type, model, purpose, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at",
     )
     .order("created_at", { ascending: false })
     .limit(500);
+
+  // 휴지통/정상 구분
+  query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
+
   if (center) query = query.eq("center", center);
+  if (q) query = query.or(`operator.ilike.%${q}%,vehicle_numbers.ilike.%${q}%`);
+  if (from) query = query.gte("issued_date", from);
+  if (to) query = query.lte("issued_date", to);
+
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
   return NextResponse.json({ rows: data ?? [] });
@@ -96,6 +111,7 @@ export async function POST(req: NextRequest) {
       vehicle_count: meta.vehicle_count ?? 0,
       vehicle_numbers: meta.vehicle_numbers ?? "",
       items: meta.items ?? [],
+      etc: meta.etc ?? "",
       receiver_name: meta.receiver_name ?? "",
       transferor_name: meta.transferor_name ?? "",
       issued_date: meta.issued_date,

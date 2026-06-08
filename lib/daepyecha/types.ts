@@ -53,9 +53,13 @@ export type ConfirmationRow = {
   vehicle_count: number;
   vehicle_numbers: string;
   items: ItemState[];
+  etc: string; // 기타사항
   receiver_name: string;
   transferor_name: string;
   issued_date: string;
   pdf_path: string;
   created_at: string;
+  updated_at: string; // 최종수정일(사이트에만 표기)
+  modified_by: string; // 수정자명
+  deleted_at: string | null; // 휴지통 여부
 };
