@@ -126,7 +126,7 @@ export default function DaepyechaList() {
   const allChecked = rows.length > 0 && selected.size === rows.length;
 
   return (
-    <main className="safe-x safe-top safe-bottom mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <header className="flex flex-col items-center pt-1 text-center">
         <h1 className="text-lg font-extrabold text-slate-800">대폐차 자재 지급확인서</h1>
         <p className="mt-1 text-xs text-slate-400">작성·서명 후 PDF로 보관됩니다.</p>
@@ -342,7 +342,7 @@ export default function DaepyechaList() {
           }}
         />
       )}
-    </main>
+    </div>
   );
 }
 

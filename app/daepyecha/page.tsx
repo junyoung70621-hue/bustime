@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import AppChrome from "@/components/AppChrome";
-import DaepyechaList from "./DaepyechaList";
+import DaepyechaTabs from "./DaepyechaTabs";
 
 export const metadata: Metadata = {
-  title: "대폐차 자재 지급확인서 - ATEC",
+  title: "대폐차 - ATEC",
 };
 
 export default function Page() {
   return (
     <AppChrome>
-      <DaepyechaList />
+      <DaepyechaTabs />
     </AppChrome>
   );
 }

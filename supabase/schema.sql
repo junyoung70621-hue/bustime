@@ -88,3 +88,33 @@ drop policy if exists "read dpc" on public.daepyecha_confirmations;
 create policy "read dpc" on public.daepyecha_confirmations
   for select to anon, authenticated using (true);
 -- INSERT/UPDATE/DELETE 정책 없음 → service_role(키 서버전용)만 쓰기 가능
+
+-- ─────────────────────────────────────────────────────────────
+-- 설치 완료 체크리스트 (공개 작성, 쓰기는 service_role API)
+-- 별도: Storage 비공개 버킷 'checklist' 생성 필요.
+-- ─────────────────────────────────────────────────────────────
+create table if not exists public.checklist_confirmations (
+  id                   uuid primary key default gen_random_uuid(),
+  center               text not null,
+  operator             text not null default '', -- 운수사명
+  model                text not null,            -- B620(한강셔틀)/B620/B700/B710/B800
+  install_date         date,
+  vehicle_numbers      text not null default '',
+  installer_name       text not null default '', -- 설치자 정자
+  operator_signer_name text not null default '', -- 운수사 담당자 정자
+  data                 jsonb not null default '{}'::jsonb, -- 폼 전체 스냅샷(서명 제외)
+  pdf_path             text not null,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now(),
+  modified_by          text not null default '',
+  deleted_at           timestamptz
+);
+create index if not exists idx_ck_center  on public.checklist_confirmations (center);
+create index if not exists idx_ck_created on public.checklist_confirmations (created_at desc);
+create index if not exists idx_ck_install on public.checklist_confirmations (install_date desc);
+create index if not exists idx_ck_deleted on public.checklist_confirmations (deleted_at);
+
+alter table public.checklist_confirmations enable row level security;
+drop policy if exists "read ck" on public.checklist_confirmations;
+create policy "read ck" on public.checklist_confirmations
+  for select to anon, authenticated using (true);
