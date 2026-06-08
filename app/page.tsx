@@ -6,7 +6,7 @@
 //   - 후보 차량 리스트 (여러 대일 때 선택)
 //   - 남은 정류장 수 + ETA 대시보드
 // ─────────────────────────────────────────────────────────────
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import type { SearchResult } from "./api/bus/search/route";
 
@@ -232,6 +232,12 @@ function EtaCard({ r }: { r: SearchResult }) {
           실시간 위치 신호가 없습니다. (미운행 / 차고지 대기 / 단말기 점검 가능성)
         </p>
         <p className="mt-1 text-xs text-slate-400">노선: {r.routeName}</p>
+        {/* 마을버스: 신호 없어도 정류장(회차지) 목록은 표시 */}
+        {r.isVillage && (
+          <div className="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white">
+            <StationList stations={r.stations} currentSeq={r.currentSeq} live={false} />
+          </div>
+        )}
       </section>
     );
   }
@@ -284,7 +290,78 @@ function EtaCard({ r }: { r: SearchResult }) {
         {r.lastSeq ? <> / 종점 {r.lastSeq} 구간</> : null}
         {r.dataTm && <> · 측정 {r.dataTm}</>}
       </div>
+
+      {/* 마을버스: 회차지 확인용 정류장 목록 + 현재 위치 */}
+      {r.isVillage && <StationList stations={r.stations} currentSeq={r.currentSeq} live={r.live} />}
     </section>
+  );
+}
+
+// 마을버스 정류장 목록 + 현재 위치. 회차지에서 대기/회차하는 마을버스 확인용.
+function StationList({
+  stations,
+  currentSeq,
+  live,
+}: {
+  stations: SearchResult["stations"];
+  currentSeq: number;
+  live: boolean;
+}) {
+  const currentRef = useRef<HTMLLIElement | null>(null);
+
+  // 현재 정류장: seq가 정확히 일치하는 칸, 없으면 currentSeq 이하 중 가장 큰 칸(직전 통과 정류장).
+  let currentIdx = -1;
+  if (live && stations && currentSeq > 0) {
+    for (let i = 0; i < stations.length; i++) {
+      if (stations[i].seq <= currentSeq) currentIdx = i;
+      if (stations[i].seq >= currentSeq) break;
+    }
+  }
+
+  // 현재 정류장이 보이도록 자동 스크롤.
+  useEffect(() => {
+    currentRef.current?.scrollIntoView({ block: "center" });
+  }, [currentIdx]);
+
+  if (!stations || stations.length === 0) {
+    return (
+      <p className="px-6 py-3 text-xs text-slate-400">
+        정류장 목록이 아직 수집되지 않았습니다(곧 자동 업데이트 예정).
+      </p>
+    );
+  }
+
+  return (
+    <div className="border-t border-slate-100">
+      <p className="flex items-center justify-between px-6 pt-3 text-xs font-semibold text-slate-500">
+        <span>정류장 ({stations.length}개)</span>
+        {live && currentIdx >= 0 ? (
+          <span className="text-emerald-600">🚍 현재 위치 표시</span>
+        ) : (
+          <span className="text-slate-300">위치신호 없음</span>
+        )}
+      </p>
+      <ol className="max-h-64 overflow-y-auto px-3 py-2">
+        {stations.map((s, i) => {
+          const isCurrent = i === currentIdx;
+          return (
+            <li
+              key={`${s.seq}-${i}`}
+              ref={isCurrent ? currentRef : null}
+              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
+                isCurrent
+                  ? "bg-emerald-50 font-bold text-emerald-700 ring-1 ring-emerald-200"
+                  : "text-slate-500"
+              }`}
+            >
+              <span className="w-6 shrink-0 text-right text-xs text-slate-300">{s.seq}</span>
+              <span className="truncate">{s.nm}</span>
+              {isCurrent && <span className="ml-auto shrink-0 text-xs">🚍 현재</span>}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

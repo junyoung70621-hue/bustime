@@ -1,0 +1,36 @@
+name: 노선 데이터 수집(last_seq·route_type·정류장)
+
+# 공공 API "노선정보조회" 일일 호출쿼터(약 1,000회)가 자정(KST)에 리셋된 뒤 실행.
+# routes 의 last_seq/route_type/stations 중 하나라도 NULL인 노선만 처리(idempotent)하므로,
+# 모두 채워진 뒤에는 API 호출 없이 곧바로 종료된다. 내 PC 전원과 무관하게 GitHub 클라우드에서 동작.
+#
+# 필요한 GitHub Secrets (Settings > Secrets and variables > Actions):
+#   PUBLIC_DATA_API_KEY (이미 등록됨)
+#   SUPABASE_DB_HOST / SUPABASE_DB_PORT / SUPABASE_DB_USER / SUPABASE_DB_PASSWORD
+#   → 값은 로컬 .env.local 의 동일 키와 같음.
+#
+# ※ 데이터가 모두 채워진 뒤에는 이 워크플로를 삭제해도 된다(매일 빈손 실행 방지).
+
+on:
+  schedule:
+    - cron: "30 15 * * *" # 매일 00:30 KST (= 15:30 UTC). 쿼터 리셋 직후.
+  workflow_dispatch: {} # 수동 실행 버튼
+
+jobs:
+  fill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: 노선 데이터 채우기(last_seq·route_type·stations)
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          SUPABASE_DB_PORT: ${{ secrets.SUPABASE_DB_PORT }}
+          SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: node scripts/fill-last-seq.mjs

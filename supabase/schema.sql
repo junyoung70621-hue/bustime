@@ -8,7 +8,8 @@ create table if not exists public.routes (
   route_id   text primary key,         -- 표준노선ID = 공공 API busRouteId
   route_name text not null default '',
   last_seq   int,                      -- 종점 구간순번(정류장 수). NULL = 미수집
-  route_type text                      -- 노선유형(1공항/2마을/3간선/4지선/5순환/6광역/15심야). NULL = 미수집
+  route_type text,                     -- 노선유형(1공항/2마을/3간선/4지선/5순환/6광역/15심야). NULL = 미수집
+  stations   jsonb                     -- 정류장 목록 [{seq,nm}] (마을버스 회차지 표시용). NULL = 미수집
 );
 
 -- ── 차량 (고유 9,575대) ──

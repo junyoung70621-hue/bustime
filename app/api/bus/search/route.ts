@@ -6,7 +6,7 @@
 // 공공 API 키는 서버에서만 사용하므로 클라이언트에 노출되지 않음.
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase, type VehicleRow, type RouteRow } from "@/lib/supabase";
+import { getSupabase, type VehicleRow, type RouteRow, type Station } from "@/lib/supabase";
 import { fetchBusPositions, PublicApiAuthError, type BusPosition } from "@/lib/publicApi";
 import { calcEta } from "@/lib/eta";
 import { classifyRoute } from "@/lib/routeType";
@@ -29,6 +29,8 @@ export type SearchResult = {
   live: boolean; // 실시간 위치 매칭 성공 여부
   busTypeLabel: string | null; // 노선유형 라벨(마을/간선/지선/…). 분류 불가 시 null
   isVillage: boolean; // 마을버스 여부
+  // 마을버스 회차지 확인용. 마을버스이고 정류장 데이터가 있을 때만 채워짐(그 외 null).
+  stations: Station[] | null; // 정류장 목록(순번 오름차순)
 };
 
 export async function GET(req: NextRequest) {
@@ -60,18 +62,20 @@ export async function GET(req: NextRequest) {
   // 2) 노선ID 중복 제거 (미배정 차량은 제외)
   const routeIds = [...new Set(vehicles.map((v) => v.route_id).filter((r): r is string => !!r))];
 
-  // 2-1) 해당 노선들의 종점순번(last_seq) + 노선유형(route_type) 조회 → Map
+  // 2-1) 해당 노선들의 종점순번(last_seq) + 노선유형(route_type) + 정류장목록(stations) 조회 → Map
   const lastSeqByRoute = new Map<string, number | null>();
   const routeTypeByRoute = new Map<string, string | null>();
+  const stationsByRoute = new Map<string, Station[] | null>();
   if (routeIds.length > 0) {
     const { data: routeRows } = await supabase
       .from("routes")
-      .select("route_id, last_seq, route_type")
+      .select("route_id, last_seq, route_type, stations")
       .in("route_id", routeIds)
       .returns<RouteRow[]>();
     for (const r of routeRows ?? []) {
       lastSeqByRoute.set(r.route_id, r.last_seq);
       routeTypeByRoute.set(r.route_id, r.route_type);
+      stationsByRoute.set(r.route_id, r.stations);
     }
   }
   const positionsByRoute = new Map<string, BusPosition[]>();
@@ -108,6 +112,9 @@ export async function GET(req: NextRequest) {
 
     const routeType = v.route_id ? routeTypeByRoute.get(v.route_id) ?? null : null;
     const typeInfo = classifyRoute(routeType, v.route_name);
+    const isVillage = typeInfo?.kind === "village";
+    // 정류장 목록은 마을버스일 때만 내려줌(다른 유형은 payload 절약 위해 생략).
+    const stations = isVillage && v.route_id ? stationsByRoute.get(v.route_id) ?? null : null;
 
     return {
       plateNo: v.plate_no,
@@ -124,7 +131,8 @@ export async function GET(req: NextRequest) {
       dataTm: pos?.dataTm ?? "",
       live: Boolean(pos),
       busTypeLabel: typeInfo?.label ?? null,
-      isVillage: typeInfo?.kind === "village",
+      isVillage,
+      stations,
     };
   });
 
