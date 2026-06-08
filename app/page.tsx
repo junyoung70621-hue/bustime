@@ -122,9 +122,10 @@ export default function Home() {
                     }`}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate">
+                      <span className="flex items-center gap-2 truncate">
                         <span className="font-bold text-slate-800">{r.plateNo}</span>
-                        <span className="ml-2 text-sm text-slate-500">{r.routeName}</span>
+                        <TypeBadge label={r.busTypeLabel} village={r.isVillage} />
+                        <span className="truncate text-sm text-slate-500">{r.routeName}</span>
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-slate-400">
                         {r.garageName}
@@ -217,7 +218,10 @@ function EtaCard({ r }: { r: SearchResult }) {
   if (!r.live) {
     return (
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-card">
-        <p className="text-lg font-bold text-slate-800">{r.plateNo}</p>
+        <p className="flex items-center gap-2 text-lg font-bold text-slate-800">
+          {r.plateNo}
+          <TypeBadge label={r.busTypeLabel} village={r.isVillage} />
+        </p>
         <p className="mt-1 text-sm font-medium text-slate-600">
           {r.garageName}
           {r.operator && r.operator !== r.garageName && (
@@ -245,7 +249,10 @@ function EtaCard({ r }: { r: SearchResult }) {
       {/* 카드 헤더 */}
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
         <div className="min-w-0">
-          <p className="text-xl font-extrabold text-slate-900">{r.plateNo}</p>
+          <p className="flex items-center gap-2 text-xl font-extrabold text-slate-900">
+            {r.plateNo}
+            <TypeBadge label={r.busTypeLabel} village={r.isVillage} />
+          </p>
           <p className="truncate text-sm font-semibold text-slate-600">{r.garageName}</p>
           <p className="truncate text-xs text-slate-400">
             {r.routeName}
@@ -278,6 +285,22 @@ function EtaCard({ r }: { r: SearchResult }) {
         {r.dataTm && <> · 측정 {r.dataTm}</>}
       </div>
     </section>
+  );
+}
+
+// 노선유형 뱃지: 마을버스는 초록 강조, 그 외(간선/지선/순환/광역/공항/심야/시내)는 회색.
+function TypeBadge({ label, village }: { label: string | null; village: boolean }) {
+  if (!label) return null;
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${
+        village
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-slate-100 text-slate-500 ring-slate-200"
+      }`}
+    >
+      {village ? "마을버스" : label}
+    </span>
   );
 }
 

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, type VehicleRow, type RouteRow } from "@/lib/supabase";
 import { fetchBusPositions, PublicApiAuthError, type BusPosition } from "@/lib/publicApi";
 import { calcEta } from "@/lib/eta";
+import { classifyRoute } from "@/lib/routeType";
 
 export const dynamic = "force-dynamic"; // 항상 실시간 조회
 
@@ -26,6 +27,8 @@ export type SearchResult = {
   atStop: boolean; // 현재 정류소 정차 중 여부
   dataTm: string;
   live: boolean; // 실시간 위치 매칭 성공 여부
+  busTypeLabel: string | null; // 노선유형 라벨(마을/간선/지선/…). 분류 불가 시 null
+  isVillage: boolean; // 마을버스 여부
 };
 
 export async function GET(req: NextRequest) {
@@ -57,15 +60,19 @@ export async function GET(req: NextRequest) {
   // 2) 노선ID 중복 제거 (미배정 차량은 제외)
   const routeIds = [...new Set(vehicles.map((v) => v.route_id).filter((r): r is string => !!r))];
 
-  // 2-1) 해당 노선들의 종점순번(last_seq) 조회 → Map
+  // 2-1) 해당 노선들의 종점순번(last_seq) + 노선유형(route_type) 조회 → Map
   const lastSeqByRoute = new Map<string, number | null>();
+  const routeTypeByRoute = new Map<string, string | null>();
   if (routeIds.length > 0) {
     const { data: routeRows } = await supabase
       .from("routes")
-      .select("route_id, last_seq")
+      .select("route_id, last_seq, route_type")
       .in("route_id", routeIds)
       .returns<RouteRow[]>();
-    for (const r of routeRows ?? []) lastSeqByRoute.set(r.route_id, r.last_seq);
+    for (const r of routeRows ?? []) {
+      lastSeqByRoute.set(r.route_id, r.last_seq);
+      routeTypeByRoute.set(r.route_id, r.route_type);
+    }
   }
   const positionsByRoute = new Map<string, BusPosition[]>();
   let authError: PublicApiAuthError | null = null;
@@ -99,6 +106,9 @@ export async function GET(req: NextRequest) {
     const currentSeq = pos?.sectOrd ?? 0;
     const eta = calcEta(currentSeq, lastSeq);
 
+    const routeType = v.route_id ? routeTypeByRoute.get(v.route_id) ?? null : null;
+    const typeInfo = classifyRoute(routeType, v.route_name);
+
     return {
       plateNo: v.plate_no,
       routeName: v.route_name,
@@ -113,6 +123,8 @@ export async function GET(req: NextRequest) {
       atStop: pos?.stopFlag === "1",
       dataTm: pos?.dataTm ?? "",
       live: Boolean(pos),
+      busTypeLabel: typeInfo?.label ?? null,
+      isVillage: typeInfo?.kind === "village",
     };
   });
 

@@ -40,4 +40,5 @@ export type RouteRow = {
   route_id: string; // 표준노선ID
   route_name: string;
   last_seq: number | null; // 종점 구간순번. null = 아직 미수집
+  route_type: string | null; // 노선유형 코드(1공항/2마을/3간선…). null = 미수집
 };
