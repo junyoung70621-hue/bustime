@@ -47,15 +47,9 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
+        {/* 헤더: 좌상단 햄버거(AppChrome, 토글)가 떠 있으므로 로고는 그만큼 우측으로 */}
+        <div className="flex items-center border-b border-slate-100 py-4 pl-14 pr-4">
           <Image src="/atec-logo.png" alt="ATEC" width={3481} height={315} className="h-6 w-auto" />
-          <button
-            onClick={onClose}
-            aria-label="메뉴 닫기"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          >
-            ✕
-          </button>
         </div>
         <nav className="flex flex-col gap-1 p-3">
           {NAV.map((item) => {

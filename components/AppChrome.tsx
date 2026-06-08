@@ -12,9 +12,11 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
-        aria-label="메뉴 열기"
-        className="safe-top fixed left-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white active:scale-95"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "메뉴 닫기" : "메뉴 열기"}
+        aria-expanded={open}
+        style={{ top: "max(0.5rem, env(safe-area-inset-top))" }}
+        className="fixed left-2 z-[60] flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100/60 active:scale-95"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <line x1="4" y1="6" x2="20" y2="6" />
