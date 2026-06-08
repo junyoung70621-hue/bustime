@@ -155,11 +155,25 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="mt-auto pt-4 text-center text-xs text-slate-300">
-        © ATEC Mobility · 티머니 단말기 A/S 지원
-        <a href="/admin" className="ml-2 underline decoration-slate-300 hover:text-slate-500">
-          관리자
-        </a>
+      <footer className="mt-auto flex flex-col items-center gap-1 pt-4 text-center text-xs text-slate-300">
+        <p>
+          © ATEC Mobility · 티머니 단말기 A/S 지원
+          <a href="/admin" className="ml-2 underline decoration-slate-300 hover:text-slate-500">
+            관리자
+          </a>
+        </p>
+        <p className="text-[11px] leading-relaxed text-slate-300">
+          실시간 위치·노선 정보 출처: 서울특별시 버스위치정보 등{" "}
+          <a
+            href="https://www.data.go.kr/data/15000332/openapi.do"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-slate-300 hover:text-slate-500"
+          >
+            공공데이터포털(data.go.kr)
+          </a>
+          {" "}· 공공누리 제1유형(출처표시)
+        </p>
       </footer>
     </main>
   );
