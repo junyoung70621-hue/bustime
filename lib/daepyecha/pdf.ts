@@ -31,7 +31,7 @@ export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
     windowHeight: targetH,
   });
 
-  const img = canvas.toDataURL("image/jpeg", 0.95);
+  const img = canvas.toDataURL("image/jpeg", 0.8);
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
   const pageW = 210;
