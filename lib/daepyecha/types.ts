@@ -5,6 +5,8 @@
 export type Model = "B620" | "B700" | "B710" | "B800";
 export type Center = "강남" | "강서" | "강북" | "강동";
 export type NewReused = "신규" | "재활용";
+export type Purpose = "대폐차" | "증차";
+export type OfficeType = "본사" | "영업소";
 
 /** 모델별 품목 정의(정적 템플릿) */
 export type ItemTemplate = {
@@ -26,6 +28,8 @@ export type ItemState = {
 export type FormState = {
   center: Center | "";
   operator: string; // 운수사
+  officeType: OfficeType; // 본사/영업소
+  purpose: Purpose; // 대폐차/증차
   model: Model | "";
   vehicleCount: number; // 차량 대수
   vehicleNumbers: string; // 차량번호(선택)
@@ -42,8 +46,9 @@ export type ConfirmationRow = {
   id: string;
   center: Center;
   operator: string;
+  office_type: string; // 본사/영업소
   model: Model;
-  purpose: string; // "대폐차"
+  purpose: string; // 대폐차/증차
   vehicle_count: number;
   vehicle_numbers: string;
   items: ItemState[];

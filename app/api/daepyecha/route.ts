@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   let query = sb
     .from("daepyecha_confirmations")
     .select(
-      "id, center, operator, model, purpose, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at",
+      "id, center, operator, office_type, model, purpose, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(500);
@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
       id,
       center: meta.center,
       operator: meta.operator,
+      office_type: meta.office_type ?? "",
       model: meta.model,
       purpose: meta.purpose ?? "대폐차",
       vehicle_count: meta.vehicle_count ?? 0,

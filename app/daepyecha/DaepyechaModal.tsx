@@ -33,6 +33,8 @@ export default function DaepyechaModal({
   const [data, setData] = useState<FormState>({
     center: "",
     operator: "",
+    officeType: "본사",
+    purpose: "대폐차",
     model: "",
     vehicleCount: 0,
     vehicleNumbers: "",
@@ -88,8 +90,9 @@ export default function DaepyechaModal({
       const meta = {
         center: data.center,
         operator: data.operator,
+        office_type: data.officeType,
         model: data.model,
-        purpose: "대폐차",
+        purpose: data.purpose,
         vehicle_count: data.vehicleCount,
         vehicle_numbers: data.vehicleNumbers,
         items: data.items,

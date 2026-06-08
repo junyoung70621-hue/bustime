@@ -87,11 +87,17 @@ export default function DaepyechaList() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="flex items-center gap-2">
+                  <p className="flex items-center gap-1.5">
                     <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                      {r.center}
+                      {r.center}센터
                     </span>
-                    <span className="truncate font-bold text-slate-800">{r.operator}</span>
+                    <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">
+                      {r.purpose}
+                    </span>
+                    <span className="truncate font-bold text-slate-800">
+                      {r.operator}
+                      {r.office_type ? ` (${r.office_type})` : ""}
+                    </span>
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
                     {r.model} · {r.vehicle_count}대

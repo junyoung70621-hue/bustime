@@ -4,10 +4,12 @@
 //   hasNewReused = 원본 비고에 "(신규 , 재활용)" 표기가 있던 품목
 // ※ 실제 양식과 품목/비고가 다르면 이 파일만 수정하면 됨.
 // ─────────────────────────────────────────────────────────────
-import type { Model, Center, ItemTemplate } from "./types";
+import type { Model, Center, ItemTemplate, Purpose, OfficeType } from "./types";
 
 export const CENTERS: Center[] = ["강남", "강서", "강북", "강동"];
 export const MODELS: Model[] = ["B620", "B700", "B710", "B800"];
+export const PURPOSES: Purpose[] = ["대폐차", "증차"];
+export const OFFICE_TYPES: OfficeType[] = ["본사", "영업소"];
 
 // Storage 객체 키는 ASCII만 허용 → 센터명을 영문 코드로 매핑(경로용)
 export const CENTER_CODE: Record<Center, string> = {

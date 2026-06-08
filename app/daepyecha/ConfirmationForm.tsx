@@ -17,21 +17,15 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
       className="w-[794px] bg-white p-10 text-[13px] leading-relaxed text-slate-900"
       style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif" }}
     >
-      {/* 상단 로고 (원본 엑셀: 티머니 / ATEC mobility) */}
-      <div className="mb-3 flex items-center justify-between">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/tmoney-logo.png" alt="티머니" className="h-10 w-auto" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/atec-mobility.png" alt="ATEC mobility" className="h-5 w-auto" />
-      </div>
       <h1 className="mb-5 text-center text-2xl font-extrabold tracking-wide">{title}</h1>
 
       <div className="mb-2 flex flex-col gap-1 text-[14px]">
         <div>
           <span className="font-bold">1. 운수사 :</span> {data.operator || ""}
+          {data.operator && data.officeType ? ` (${data.officeType})` : ""}
         </div>
         <div>
-          <span className="font-bold">2. 용　도 :</span> 대폐차
+          <span className="font-bold">2. 용　도 :</span> {data.purpose}
         </div>
         <div>
           <span className="font-bold">3. 차량번호 :</span> {data.vehicleNumbers || ""}
@@ -75,8 +69,8 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
 
       <div className="mt-6 flex items-end justify-between text-[14px]">
         <div className="flex flex-col gap-6">
-          <SignLine label="* 인수자 확인 (운수회사) :" name={data.receiverName} sig={data.receiverSig} />
-          <SignLine label="* 인계자 확인 (자사 직원) :" name={data.transferorName} sig={data.transferorSig} />
+          <SignLine label="* 인수자 확인 :" name={data.receiverName} sig={data.receiverSig} />
+          <SignLine label="* 인계자 확인 :" name={data.transferorName} sig={data.transferorSig} />
         </div>
         <div className="text-right text-[13px]">
           <p>* 지급 날짜</p>
@@ -85,6 +79,14 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
             {data.center ? `${data.center}센터` : ""}
           </p>
         </div>
+      </div>
+
+      {/* 하단 로고 (원본 엑셀: 티머니 / ATEC mobility) */}
+      <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/tmoney-logo.png" alt="티머니" className="h-9 w-auto" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/atec-mobility.png" alt="ATEC mobility" className="h-5 w-auto" />
       </div>
     </div>
   );

@@ -55,8 +55,9 @@ create table if not exists public.daepyecha_confirmations (
   id              uuid primary key default gen_random_uuid(),
   center          text not null,             -- 강남/강서/강북/강동
   operator        text not null default '',  -- 운수사
+  office_type     text not null default '',  -- 본사/영업소
   model           text not null,             -- B620/B700/B710/B800
-  purpose         text not null default '대폐차',
+  purpose         text not null default '대폐차', -- 대폐차/증차
   vehicle_count   int  not null default 0,
   vehicle_numbers text not null default '',
   items           jsonb not null default '[]'::jsonb, -- [{name,bigo,qty,newReused?}]

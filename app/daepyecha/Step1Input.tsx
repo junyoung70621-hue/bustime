@@ -4,7 +4,7 @@
 // 신규 작성 1단계: 기본 정보 입력
 //   센터 / 운수사 / 모델 / 수량(대수) / 차량번호 / 지급날짜 + 품목별 수량·신규재활용
 // ─────────────────────────────────────────────────────────────
-import { CENTERS, MODELS } from "@/lib/daepyecha/templates";
+import { CENTERS, MODELS, PURPOSES, OFFICE_TYPES } from "@/lib/daepyecha/templates";
 import type { FormState, Model, NewReused, Center } from "@/lib/daepyecha/types";
 
 export default function Step1Input({
@@ -28,6 +28,24 @@ export default function Step1Input({
 }) {
   return (
     <div className="flex flex-col gap-3">
+      {/* 용도: 대폐차 / 증차 */}
+      <Field label="용도">
+        <div className="flex overflow-hidden rounded-xl ring-1 ring-slate-200">
+          {PURPOSES.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => patch({ purpose: p })}
+              className={`h-11 flex-1 text-sm font-bold transition ${
+                data.purpose === p ? "bg-brand-600 text-white" : "bg-white text-slate-500"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </Field>
+
       <div className="grid grid-cols-2 gap-3">
         <Field label="센터">
           <select
@@ -55,13 +73,29 @@ export default function Step1Input({
         </Field>
       </div>
 
-      <Field label="운수사">
-        <input
-          value={data.operator}
-          onChange={(e) => patch({ operator: e.target.value })}
-          placeholder="예: ○○운수"
-          className={inputCls}
-        />
+      <Field label="운수사 / 구분">
+        <div className="flex gap-2">
+          <input
+            value={data.operator}
+            onChange={(e) => patch({ operator: e.target.value })}
+            placeholder="예: ○○운수"
+            className={`${inputCls} flex-1`}
+          />
+          <div className="flex shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200">
+            {OFFICE_TYPES.map((o) => (
+              <button
+                key={o}
+                type="button"
+                onClick={() => patch({ officeType: o })}
+                className={`h-11 px-3 text-sm font-bold transition ${
+                  data.officeType === o ? "bg-brand-600 text-white" : "bg-white text-slate-500"
+                }`}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -90,7 +124,7 @@ export default function Step1Input({
         <input
           value={data.vehicleNumbers}
           onChange={(e) => patch({ vehicleNumbers: e.target.value })}
-          placeholder="예: 서울70사1234, 1235"
+          placeholder="예: 70-1234"
           className={inputCls}
         />
       </Field>
