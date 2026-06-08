@@ -14,6 +14,7 @@
 npm-debug.log*
 .vercel
 next-env.d.ts
+*.tsbuildinfo
 
 # 회사 차량 데이터(이미 Supabase에 적재됨, 원본 .xls에서 재생성 가능)
 supabase/vehicles.csv
