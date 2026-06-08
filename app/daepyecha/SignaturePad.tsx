@@ -34,7 +34,7 @@ export default function SignaturePad({
       <div className="safe-bottom w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <h3 className="text-base font-bold text-slate-800">{title}</h3>
 
-        <label className="mt-3 block text-sm font-semibold text-slate-600">이름 (정자)</label>
+        <label className="mt-3 block text-sm font-semibold text-slate-600">이름</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -47,6 +47,8 @@ export default function SignaturePad({
           <SignatureCanvas
             ref={ref}
             penColor="#111827"
+            // 서명 시작 시 입력창 포커스를 풀어 모바일 키보드가 뜨지 않게 함
+            onBegin={() => (document.activeElement as HTMLElement | null)?.blur?.()}
             canvasProps={{
               width: 340,
               height: 170,

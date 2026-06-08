@@ -129,6 +129,16 @@ export default function Step1Input({
         />
       </Field>
 
+      <Field label="기타사항 (선택)">
+        <textarea
+          value={data.etc}
+          onChange={(e) => patch({ etc: e.target.value })}
+          placeholder="기타 특이사항이 있으면 입력"
+          rows={2}
+          className={`${inputCls} h-auto py-2`}
+        />
+      </Field>
+
       {/* 품목 */}
       {data.model ? (
         <div className="rounded-xl border border-slate-200">

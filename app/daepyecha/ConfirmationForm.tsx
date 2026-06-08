@@ -18,6 +18,9 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
       className="w-[794px] bg-white p-10 text-[13px] text-slate-900"
       style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif" }}
     >
+      <div className="mb-1 text-right text-[12px] font-bold text-slate-600">
+        {data.center ? `${data.center}센터` : ""}
+      </div>
       <h1 className="mb-5 text-center text-2xl font-extrabold">{title}</h1>
 
       <div className="mb-1 text-[14px]">
@@ -61,29 +64,27 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
               <td className={`${td} text-[11px]`}>{it.bigo}</td>
             </tr>
           ))}
-        </tbody>
-      </table>
-
-      <p className="mb-6 mt-4 text-[13px]">* 상기 수량에 대해 인수했음을 확인함.</p>
-
-      {/* 서명 / 날짜 — 2열 테이블(flex 미사용) */}
-      <table className="w-full text-[14px]">
-        <tbody>
+          {/* 13. 기타 (선택 입력) */}
           <tr>
-            <td className="w-[62%] align-bottom">
-              <SignLine label="* 인수자 확인 :" name={data.receiverName} sig={data.receiverSig} />
-              <SignLine label="* 인계자 확인 :" name={data.transferorName} sig={data.transferorSig} />
-            </td>
-            <td className="align-bottom text-right text-[13px]">
-              <div>* 지급 날짜</div>
-              <div className="mt-1 font-bold">{formatDate(data.issuedDate)}</div>
-              <div className="mt-4 font-bold text-slate-700">
-                {data.center ? `${data.center}센터` : ""}
-              </div>
-            </td>
+            <td className={`${td} text-center`}>{data.items.length + 1}</td>
+            <td className={td}>기타</td>
+            <td className={`${td} text-center`}></td>
+            <td className={`${td} text-center`}></td>
+            <td className={`${td} text-[11px]`}>{data.etc || ""}</td>
           </tr>
         </tbody>
       </table>
+
+      <p className="mt-5 text-[14px]">* 상기 수량에 대해 인수했음을 확인함.</p>
+      <p className="mt-4 text-[14px]">
+        <span className="font-bold">* 지급 날짜 :</span> {formatDate(data.issuedDate)}
+      </p>
+      <div className="mt-3">
+        <SignLine label="* 인수자 확인 :" name={data.receiverName} sig={data.receiverSig} />
+      </div>
+      <div className="mt-2">
+        <SignLine label="* 인계자 확인 :" name={data.transferorName} sig={data.transferorSig} />
+      </div>
 
       {/* 하단 로고 — 2열 테이블(원본 엑셀: 티머니 / ATEC mobility) */}
       <table className="mt-8 w-full border-t border-slate-200">

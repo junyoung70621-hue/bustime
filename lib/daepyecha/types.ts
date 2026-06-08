@@ -33,6 +33,7 @@ export type FormState = {
   model: Model | "";
   vehicleCount: number; // 차량 대수
   vehicleNumbers: string; // 차량번호(선택)
+  etc: string; // 기타사항(선택)
   issuedDate: string; // YYYY-MM-DD
   items: ItemState[];
   receiverName: string; // 인수자(운수회사) 정자명

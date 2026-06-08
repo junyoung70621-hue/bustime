@@ -38,6 +38,7 @@ export default function DaepyechaModal({
     model: "",
     vehicleCount: 0,
     vehicleNumbers: "",
+    etc: "",
     issuedDate: todayStr(),
     items: [],
     receiverName: "",
