@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import AppChrome from "@/components/AppChrome";
 import type { SearchResult } from "./api/bus/search/route";
 
 export default function Home() {
@@ -47,6 +48,7 @@ export default function Home() {
   }
 
   return (
+    <AppChrome>
     <main className="safe-x safe-top safe-bottom mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col gap-5">
       {/* 헤더 / 브랜딩 */}
       <header className="flex flex-col items-center text-center">
@@ -210,6 +212,7 @@ export default function Home() {
         </p>
       </footer>
     </main>
+    </AppChrome>
   );
 }
 
