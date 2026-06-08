@@ -242,10 +242,17 @@ function EtaCard({ r }: { r: SearchResult }) {
     );
   }
 
+  // 메인: 도착 예상 시각(현재 한국시간 + 남은 분). 종점 도착/ETA미상일 땐 상태 문구.
   const etaLabel = r.etaUnknown
     ? "—"
     : r.arrived
       ? "종점 도착"
+      : `${arrivalClock(r.etaMinutes)} 도착`;
+
+  // 보조: 남은 시간. 도착/미상일 땐 표시 안 함.
+  const etaRemain =
+    r.etaUnknown || r.arrived
+      ? undefined
       : r.etaMinutes <= 2
         ? "곧 도착"
         : `약 ${r.etaMinutes}분`;
@@ -275,7 +282,7 @@ function EtaCard({ r }: { r: SearchResult }) {
       {/* 지표 */}
       <div className="grid grid-cols-2 gap-px bg-slate-100">
         <Stat label="남은 정류장" value={r.etaUnknown ? "—" : `${r.remainingStops}개`} />
-        <Stat label="예상 도착(ETA)" value={etaLabel} highlight />
+        <Stat label="예상 도착(ETA)" value={etaLabel} sub={etaRemain} highlight />
       </div>
 
       {r.etaUnknown && (
@@ -381,13 +388,30 @@ function TypeBadge({ label, village }: { label: string | null; village: boolean 
   );
 }
 
+// 남은 분(etaMinutes)을 한국시간(Asia/Seoul) 기준 도착 예상 시각 "ㅇㅇ시 ㅇㅇ분"으로 변환.
+// 사용자 기기 시간대와 무관하게 항상 한국 시각으로 표시한다.
+function arrivalClock(minutes: number): string {
+  const arrive = new Date(Date.now() + minutes * 60_000);
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(arrive);
+  const hh = parts.find((p) => p.type === "hour")?.value ?? "";
+  const mm = parts.find((p) => p.type === "minute")?.value ?? "";
+  return `${hh}시 ${mm}분`;
+}
+
 function Stat({
   label,
   value,
+  sub,
   highlight,
 }: {
   label: string;
   value: string;
+  sub?: string;
   highlight?: boolean;
 }) {
   return (
@@ -395,11 +419,12 @@ function Stat({
       <p className="text-xs font-medium text-slate-400">{label}</p>
       <p
         className={`mt-1 font-extrabold ${
-          highlight ? "text-3xl text-brand-600" : "text-2xl text-slate-800"
+          highlight ? "text-[23px] text-brand-600" : "text-2xl text-slate-800"
         }`}
       >
         {value}
       </p>
+      {sub && <p className="mt-1 text-sm font-semibold text-slate-400">{sub}</p>}
     </div>
   );
 }
