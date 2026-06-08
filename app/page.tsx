@@ -155,24 +155,57 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="mt-auto flex flex-col items-center gap-1 pt-4 text-center text-xs text-slate-300">
-        <p>
+      <footer className="mt-auto flex flex-col items-center gap-2 pt-6 text-center">
+        <p className="text-xs text-slate-300">
           © ATEC Mobility · 티머니 단말기 A/S 지원
           <a href="/admin" className="ml-2 underline decoration-slate-300 hover:text-slate-500">
             관리자
           </a>
         </p>
-        <p className="text-[11px] leading-relaxed text-slate-300">
+        <p className="px-4 text-[11px] leading-relaxed text-slate-400">
           실시간 위치·노선 정보 출처: 서울특별시 버스위치정보 등{" "}
           <a
             href="https://www.data.go.kr/data/15000332/openapi.do"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline decoration-slate-300 hover:text-slate-500"
+            className="underline decoration-slate-300 hover:text-slate-600"
           >
             공공데이터포털(data.go.kr)
           </a>
-          {" "}· 공공누리 제1유형(출처표시)
+        </p>
+        {/* 이용허락범위 마크: 공공누리 제1유형(출처표시) + CC BY(저작권 표시) */}
+        <div className="flex items-center gap-4">
+          <a
+            href="https://www.kogl.or.kr/info/licenseType1.do"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="공공누리 제1유형: 출처표시"
+          >
+            <Image
+              src="/kogl-type1.jpg"
+              alt="공공누리 제1유형(출처표시)"
+              width={574}
+              height={241}
+              className="h-7 w-auto"
+            />
+          </a>
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/deed.ko"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="CC BY: 저작권 표시"
+          >
+            <Image
+              src="/cc-by.png"
+              alt="CC BY (저작권 표시)"
+              width={403}
+              height={141}
+              className="h-7 w-auto"
+            />
+          </a>
+        </div>
+        <p className="text-[10px] leading-relaxed text-slate-300">
+          공공저작물: 출처표시(제1유형) · 제3자 권리 포함: 저작권 표시
         </p>
       </footer>
     </main>
