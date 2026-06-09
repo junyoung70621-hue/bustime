@@ -31,6 +31,16 @@ export type SearchResult = {
   isVillage: boolean; // 마을버스 여부
   // 마을버스 회차지 확인용. 마을버스이고 정류장 데이터가 있을 때만 채워짐(그 외 null).
   stations: Station[] | null; // 정류장 목록(순번 오름차순)
+  // 같은 노선에서 현재 운행 중인 모든 차량(정류장 리스트에 위치 표시용). 마을버스일 때만 채움.
+  routeVehicles: RouteVehicle[] | null;
+};
+
+// 정류장 리스트에 띄울 차량 1대(노선 내 다른 차량 포함).
+export type RouteVehicle = {
+  tail: string; // 차량번호 끝 4자리
+  sectOrd: number; // 현재 구간순번(= 현재 정류장 순서)
+  stopFlag: string; // "1" 정류소 정차중 / "0" 운행중
+  sel: boolean; // 검색으로 선택된 그 차량인지
 };
 
 export async function GET(req: NextRequest) {
@@ -116,6 +126,19 @@ export async function GET(req: NextRequest) {
     // 정류장 목록은 마을버스일 때만 내려줌(다른 유형은 payload 절약 위해 생략).
     const stations = isVillage && v.route_id ? stationsByRoute.get(v.route_id) ?? null : null;
 
+    // 같은 노선의 모든 차량 위치(마을버스만). 위치신호 있는 차량(sectOrd>0)만, 끝 4자리로.
+    const routeVehicles: RouteVehicle[] | null =
+      isVillage && v.route_id
+        ? positions
+            .filter((p) => p.sectOrd > 0)
+            .map((p) => ({
+              tail: (p.plainNo ?? "").slice(-4),
+              sectOrd: p.sectOrd,
+              stopFlag: p.stopFlag,
+              sel: Boolean(pos) && p.vehId === pos!.vehId,
+            }))
+        : null;
+
     return {
       plateNo: v.plate_no,
       routeName: v.route_name,
@@ -133,6 +156,7 @@ export async function GET(req: NextRequest) {
       busTypeLabel: typeInfo?.label ?? null,
       isVillage,
       stations,
+      routeVehicles,
     };
   });
 

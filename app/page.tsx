@@ -238,7 +238,12 @@ function EtaCard({ r }: { r: SearchResult }) {
         {/* 마을버스: 신호 없어도 정류장(회차지) 목록은 표시 */}
         {r.isVillage && (
           <div className="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white">
-            <StationList stations={r.stations} currentSeq={r.currentSeq} live={false} />
+            <StationList
+              stations={r.stations}
+              currentSeq={r.currentSeq}
+              live={false}
+              routeVehicles={r.routeVehicles}
+            />
           </div>
         )}
       </section>
@@ -302,31 +307,58 @@ function EtaCard({ r }: { r: SearchResult }) {
       </div>
 
       {/* 마을버스: 회차지 확인용 정류장 목록 + 현재 위치 */}
-      {r.isVillage && <StationList stations={r.stations} currentSeq={r.currentSeq} live={r.live} />}
+      {r.isVillage && (
+        <StationList
+          stations={r.stations}
+          currentSeq={r.currentSeq}
+          live={r.live}
+          routeVehicles={r.routeVehicles}
+        />
+      )}
     </section>
   );
 }
 
+// seq가 어느 정류장 칸에 해당하는지: 정확히 일치하면 그 칸, 없으면 seq 이하 중 가장 큰 칸(직전 통과).
+function stationIdxForSeq(stations: NonNullable<SearchResult["stations"]>, seq: number): number {
+  let idx = -1;
+  for (let i = 0; i < stations.length; i++) {
+    if (stations[i].seq <= seq) idx = i;
+    if (stations[i].seq >= seq) break;
+  }
+  return idx;
+}
+
 // 마을버스 정류장 목록 + 현재 위치. 회차지에서 대기/회차하는 마을버스 확인용.
+// 같은 노선에서 운행 중인 모든 차량을 각 정류장에 차량번호 끝 4자리로 표시(선택 차량은 강조).
 function StationList({
   stations,
   currentSeq,
   live,
+  routeVehicles,
 }: {
   stations: SearchResult["stations"];
   currentSeq: number;
   live: boolean;
+  routeVehicles: SearchResult["routeVehicles"];
 }) {
   const currentRef = useRef<HTMLLIElement | null>(null);
 
-  // 현재 정류장: seq가 정확히 일치하는 칸, 없으면 currentSeq 이하 중 가장 큰 칸(직전 통과 정류장).
-  let currentIdx = -1;
-  if (live && stations && currentSeq > 0) {
-    for (let i = 0; i < stations.length; i++) {
-      if (stations[i].seq <= currentSeq) currentIdx = i;
-      if (stations[i].seq >= currentSeq) break;
+  // 선택 차량의 현재 정류장(자동 스크롤·강조용).
+  const currentIdx = live && stations && currentSeq > 0 ? stationIdxForSeq(stations, currentSeq) : -1;
+
+  // 정류장 칸별 차량 목록. 위치신호 있는 차량을 각자 sectOrd 위치 칸에 모은다.
+  const vehiclesByIdx = new Map<number, NonNullable<SearchResult["routeVehicles"]>>();
+  if (stations && routeVehicles) {
+    for (const rv of routeVehicles) {
+      const idx = stationIdxForSeq(stations, rv.sectOrd);
+      if (idx < 0) continue;
+      const list = vehiclesByIdx.get(idx) ?? [];
+      list.push(rv);
+      vehiclesByIdx.set(idx, list);
     }
   }
+  const runningCount = routeVehicles?.length ?? 0;
 
   // 현재 정류장이 보이도록 자동 스크롤.
   useEffect(() => {
@@ -345,8 +377,8 @@ function StationList({
     <div className="border-t border-slate-100">
       <p className="flex items-center justify-between px-6 pt-3 text-xs font-semibold text-slate-500">
         <span>정류장 ({stations.length}개)</span>
-        {live && currentIdx >= 0 ? (
-          <span className="text-emerald-600">🚍 현재 위치 표시</span>
+        {runningCount > 0 ? (
+          <span className="text-emerald-600">🚍 운행 중 {runningCount}대</span>
         ) : (
           <span className="text-slate-300">위치신호 없음</span>
         )}
@@ -354,6 +386,7 @@ function StationList({
       <ol className="max-h-64 overflow-y-auto px-3 py-2">
         {stations.map((s, i) => {
           const isCurrent = i === currentIdx;
+          const here = vehiclesByIdx.get(i);
           return (
             <li
               key={`${s.seq}-${i}`}
@@ -361,12 +394,30 @@ function StationList({
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
                 isCurrent
                   ? "bg-emerald-50 font-bold text-emerald-700 ring-1 ring-emerald-200"
-                  : "text-slate-500"
+                  : here
+                    ? "text-slate-700"
+                    : "text-slate-500"
               }`}
             >
               <span className="w-6 shrink-0 text-right text-xs text-slate-300">{s.seq}</span>
               <span className="truncate">{s.nm}</span>
-              {isCurrent && <span className="ml-auto shrink-0 text-xs">🚍 현재</span>}
+              {here && (
+                <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
+                  {here.map((rv, k) => (
+                    <span
+                      key={`${rv.tail}-${k}`}
+                      title={rv.stopFlag === "1" ? "정차 중" : "운행 중"}
+                      className={`rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                        rv.sel
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+                      }`}
+                    >
+                      🚍{rv.tail}
+                    </span>
+                  ))}
+                </span>
+              )}
             </li>
           );
         })}
