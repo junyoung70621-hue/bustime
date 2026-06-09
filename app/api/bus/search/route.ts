@@ -33,6 +33,12 @@ export type SearchResult = {
   stations: Station[] | null; // 정류장 목록(순번 오름차순)
   // 같은 노선에서 현재 운행 중인 모든 차량(정류장 리스트에 위치 표시용). 마을버스일 때만 채움.
   routeVehicles: RouteVehicle[] | null;
+  // 같은 노선에서 내 바로 앞에 가는 차(앞차)의 번호 끝 4자리. 없으면 null.
+  // GPS/LTE 장애로 내 위치가 안 잡힐 땐, 신호 있을 때 오늘 기록해 둔 마지막 앞차를 보여준다.
+  frontTail: string | null;
+  frontGap: number; // 앞차까지 구간(정거장) 수. 0 = 미상
+  frontLive: boolean; // true=지금 실시간 앞차 / false=오늘 기록된 마지막 앞차
+  frontAt: string | null; // 기록 앞차일 때 기록 시각(KST "HH:MM"). 실시간이면 null
 };
 
 // 정류장 리스트에 띄울 차량 1대(노선 내 다른 차량 포함).
@@ -42,6 +48,31 @@ export type RouteVehicle = {
   stopFlag: string; // "1" 정류소 정차중 / "0" 운행중
   sel: boolean; // 검색으로 선택된 그 차량인지
 };
+
+// 같은 노선에서 sectOrd 바로 앞(다음으로 큰 구간순번) 차량 = 앞차. 없으면(선두) null.
+function frontCarOf(positions: BusPosition[], sectOrd: number): BusPosition | null {
+  let front: BusPosition | null = null;
+  for (const p of positions) {
+    if (p.sectOrd > sectOrd && (!front || p.sectOrd < front.sectOrd)) front = p;
+  }
+  return front;
+}
+
+// 차량 1대를 실시간 위치와 매칭(차량ID 우선, 없으면 끝자리 번호판).
+function matchPosition(positions: BusPosition[], v: VehicleRow, q: string): BusPosition | undefined {
+  return (
+    positions.find((p) => p.vehId === v.vehicle_id) ??
+    positions.find((p) => p.plainNo?.endsWith(q))
+  );
+}
+
+// ISO 시각 → 한국시간(KST) "HH:MM".
+function fmtKstHm(iso: string): string {
+  const k = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
+  const hh = String(k.getUTCHours()).padStart(2, "0");
+  const mm = String(k.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
@@ -109,12 +140,57 @@ export async function GET(req: NextRequest) {
     ? "실시간 위치 서버 인증 대기 중입니다(공공 API 키 동기화 전). 차량·노선 정보만 표시되며 ETA는 키 활성화 후 자동 표시됩니다."
     : null;
 
+  // 2-2) 앞차 기록: 조회된 노선의 모든 실시간 차량에 대해 "바로 앞차"를 그날(KST)자로 upsert.
+  //   GPS/LTE 신호가 잡힐 때 기록해 두고, 끊겼을 때(아래 2-3) 마지막 기록을 보여주기 위함.
+  const serviceDate = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const nowIso = new Date().toISOString();
+  const frontRecords = [];
+  for (const positions of positionsByRoute.values()) {
+    for (const p of positions) {
+      if (!p.vehId || p.sectOrd <= 0) continue;
+      const front = frontCarOf(positions, p.sectOrd);
+      if (!front) continue; // 선두 차량은 앞차 없음
+      frontRecords.push({
+        service_date: serviceDate,
+        vehicle_id: p.vehId,
+        front_tail: (front.plainNo ?? "").slice(-4),
+        front_gap: front.sectOrd - p.sectOrd,
+        sect_ord: p.sectOrd,
+        recorded_at: nowIso,
+      });
+    }
+  }
+  if (frontRecords.length > 0) {
+    const { error: upErr } = await supabase
+      .from("front_car_log")
+      .upsert(frontRecords, { onConflict: "service_date,vehicle_id" });
+    if (upErr) console.error("front_car_log upsert 실패:", upErr.message);
+  }
+
+  // 2-3) 실시간 신호가 없는 후보 차량은 오늘 기록된 마지막 앞차를 조회(있으면 그걸로 표시).
+  const offlineIds = vehicles
+    .filter((v) => {
+      const positions = v.route_id ? positionsByRoute.get(v.route_id) ?? [] : [];
+      return v.vehicle_id && !matchPosition(positions, v, q);
+    })
+    .map((v) => v.vehicle_id);
+  const histByVehicle = new Map<
+    string,
+    { front_tail: string; front_gap: number; recorded_at: string }
+  >();
+  if (offlineIds.length > 0) {
+    const { data: hist } = await supabase
+      .from("front_car_log")
+      .select("vehicle_id, front_tail, front_gap, recorded_at")
+      .eq("service_date", serviceDate)
+      .in("vehicle_id", offlineIds);
+    for (const h of hist ?? []) histByVehicle.set(h.vehicle_id, h);
+  }
+
   // 3) 각 후보 차량을 실시간 위치와 매칭 → ETA 계산
   const results: SearchResult[] = vehicles.map((v) => {
     const positions = v.route_id ? positionsByRoute.get(v.route_id) ?? [] : [];
-    const pos =
-      positions.find((p) => p.vehId === v.vehicle_id) ??
-      positions.find((p) => p.plainNo?.endsWith(q));
+    const pos = matchPosition(positions, v, q);
 
     const lastSeq = v.route_id ? lastSeqByRoute.get(v.route_id) ?? null : null;
     const currentSeq = pos?.sectOrd ?? 0;
@@ -139,6 +215,27 @@ export async function GET(req: NextRequest) {
             }))
         : null;
 
+    // 앞차: 실시간 위치가 있으면 지금 앞차, 없으면 오늘 기록된 마지막 앞차.
+    let frontTail: string | null = null;
+    let frontGap = 0;
+    let frontLive = false;
+    let frontAt: string | null = null;
+    if (pos) {
+      const front = frontCarOf(positions, pos.sectOrd);
+      if (front) {
+        frontTail = (front.plainNo ?? "").slice(-4);
+        frontGap = front.sectOrd - pos.sectOrd;
+        frontLive = true;
+      }
+    } else if (v.vehicle_id) {
+      const h = histByVehicle.get(v.vehicle_id);
+      if (h) {
+        frontTail = h.front_tail;
+        frontGap = h.front_gap;
+        frontAt = fmtKstHm(h.recorded_at);
+      }
+    }
+
     return {
       plateNo: v.plate_no,
       routeName: v.route_name,
@@ -157,6 +254,10 @@ export async function GET(req: NextRequest) {
       isVillage,
       stations,
       routeVehicles,
+      frontTail,
+      frontGap,
+      frontLive,
+      frontAt,
     };
   });
 

@@ -118,3 +118,26 @@ alter table public.checklist_confirmations enable row level security;
 drop policy if exists "read ck" on public.checklist_confirmations;
 create policy "read ck" on public.checklist_confirmations
   for select to anon, authenticated using (true);
+
+-- ─────────────────────────────────────────────────────────────
+-- 앞차 기록 (시내버스 GPS/LTE 장애 시 위치 가늠용)
+-- 검색 시 그 노선 전 차량의 "바로 앞차" 관계를 그날(KST)자로 기록.
+-- 신호가 잡힐 때 기록해 두고, 끊겼을 때 마지막 앞차를 보여준다. 매일 운행일별로 누적.
+-- 쓰기는 service_role(검색 API)만, 읽기는 anon 허용.
+-- ─────────────────────────────────────────────────────────────
+create table if not exists public.front_car_log (
+  service_date date not null,                    -- KST 운행일
+  vehicle_id   text not null,                    -- 뒤차(기록 대상) 차량ID (= 공공 API vehId)
+  front_tail   text not null,                    -- 앞차 번호 끝 4자리
+  front_gap    int  not null default 0,          -- 앞차까지 구간(정거장) 수
+  sect_ord     int  not null default 0,          -- 기록 시점 내 구간순번
+  recorded_at  timestamptz not null default now(),
+  primary key (service_date, vehicle_id)
+);
+create index if not exists idx_front_car_date on public.front_car_log (service_date);
+
+alter table public.front_car_log enable row level security;
+drop policy if exists "read front_car_log" on public.front_car_log;
+create policy "read front_car_log" on public.front_car_log
+  for select to anon, authenticated using (true);
+-- INSERT/UPDATE 정책 없음 → service_role(검색 API)만 쓰기

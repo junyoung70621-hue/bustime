@@ -1,0 +1,36 @@
+name: 앞차 아침 시드(시내버스)
+
+# 매일 07:00 KST(= 22:00 UTC)에 시내버스 410개 노선의 위치를 1회 조회하여
+# 각 차량의 "바로 앞차"를 그날자로 front_car_log 에 기록한다.
+# GPS/LTE 신호가 끊긴 차량도 아침에 잡아둔 앞차로 위치를 가늠할 수 있게 하는 시드.
+# 낮 동안은 검색 API가 같은 테이블을 덮어쓰며 최신 유지(추가 호출 없음).
+# 호출량: 노선당 1회 ≈ 410회/일 (일일 호출쿼터 내). 마을버스는 제외.
+#
+# 필요한 GitHub Secrets (Settings > Secrets and variables > Actions):
+#   PUBLIC_DATA_API_KEY
+#   SUPABASE_DB_HOST / SUPABASE_DB_PORT / SUPABASE_DB_USER / SUPABASE_DB_PASSWORD
+#   → 값은 로컬 .env.local 의 동일 키와 같음.
+
+on:
+  schedule:
+    - cron: "0 22 * * *" # 매일 07:00 KST (= 22:00 UTC)
+  workflow_dispatch: {} # 수동 실행 버튼
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: 앞차 시드(시내버스 노선 위치 1회 조회)
+        env:
+          PUBLIC_DATA_API_KEY: ${{ secrets.PUBLIC_DATA_API_KEY }}
+          SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          SUPABASE_DB_PORT: ${{ secrets.SUPABASE_DB_PORT }}
+          SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: node scripts/seed-front-car.mjs

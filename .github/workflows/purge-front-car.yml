@@ -1,0 +1,30 @@
+name: 앞차 이력 자정 정리
+
+# 매일 00:00 KST(= 15:00 UTC)에 지난 운행일(오늘 KST 이전) front_car_log 기록을 삭제한다.
+# 앞차는 그날그날 배차가 달라지므로 하루치만 유지. 테이블 누적 방지용.
+#
+# 필요한 GitHub Secrets:
+#   SUPABASE_DB_HOST / SUPABASE_DB_PORT / SUPABASE_DB_USER / SUPABASE_DB_PASSWORD
+
+on:
+  schedule:
+    - cron: "0 15 * * *" # 매일 00:00 KST (= 15:00 UTC)
+  workflow_dispatch: {} # 수동 실행 버튼
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: 지난 운행일 앞차 기록 삭제
+        env:
+          SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          SUPABASE_DB_PORT: ${{ secrets.SUPABASE_DB_PORT }}
+          SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: node scripts/purge-front-car.mjs
