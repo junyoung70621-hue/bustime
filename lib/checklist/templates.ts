@@ -23,6 +23,8 @@ export function modelFamily(m: string): "pyochul" | "driver" {
 }
 // 한강셔틀은 승하차단말기 IH 칸이 없음
 export const hasSeunghacha = (m: string) => m !== "B620(한강셔틀)";
+// B710은 승.하차단말기(모듈) IH 칸이 없음
+export const hasSeunghachaModule = (m: string) => m !== "B710";
 
 // 모델별 IH 프리셋(자동 입력값). 미지정 항목은 빈칸.
 export const MODEL_PRESETS: Record<string, Partial<CkFormState>> = {

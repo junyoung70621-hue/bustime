@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
-import { CK_MODELS, CK_MODELS_DATA, emptyCkForm, rowCheckKey, modelFamily, hasSeunghacha, presetFor } from "@/lib/checklist/templates";
+import { CK_MODELS, CK_MODELS_DATA, emptyCkForm, rowCheckKey, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, VehicleType, OX } from "@/lib/checklist/types";
 import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
@@ -199,14 +199,16 @@ export default function ChecklistModal({
                         <input value={data.hacha2IH} onChange={(e) => patch({ hacha2IH: e.target.value })} placeholder="하차2" className={inp} />
                       </div>
                     </div>
-                    <div className="col-span-2">
-                      <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2)</span>
-                      <div className="flex gap-1">
-                        <input value={data.seungChaModuleIH} onChange={(e) => patch({ seungChaModuleIH: e.target.value })} placeholder="승차" className={inp} />
-                        <input value={data.hacha1ModuleIH} onChange={(e) => patch({ hacha1ModuleIH: e.target.value })} placeholder="하차1" className={inp} />
-                        <input value={data.hacha2ModuleIH} onChange={(e) => patch({ hacha2ModuleIH: e.target.value })} placeholder="하차2" className={inp} />
+                    {hasSeunghachaModule(data.model) && (
+                      <div className="col-span-2">
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2)</span>
+                        <div className="flex gap-1">
+                          <input value={data.seungChaModuleIH} onChange={(e) => patch({ seungChaModuleIH: e.target.value })} placeholder="승차" className={inp} />
+                          <input value={data.hacha1ModuleIH} onChange={(e) => patch({ hacha1ModuleIH: e.target.value })} placeholder="하차1" className={inp} />
+                          <input value={data.hacha2ModuleIH} onChange={(e) => patch({ hacha2ModuleIH: e.target.value })} placeholder="하차2" className={inp} />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
               </div>
@@ -371,13 +373,17 @@ function firstMissing(d: CkFormState): string | null {
       [!d.seungChaIH.trim(), "승차 IH"],
       [!d.hacha1IH.trim(), "하차1 IH"],
       [!d.hacha2IH.trim(), "하차2 IH"],
-      [!d.seungChaModuleIH.trim(), "승차(모듈) IH"],
-      [!d.hacha1ModuleIH.trim(), "하차1(모듈) IH"],
-      [!d.hacha2ModuleIH.trim(), "하차2(모듈) IH"],
       [!d.pyochulIH.trim(), "표출단말기 IH"],
       [!d.pyochulModuleIH.trim(), "표출(모듈) IH"],
       [!d.mainIH.trim(), "메인단말기 IH"],
     );
+    if (hasSeunghachaModule(d.model)) {
+      req.push(
+        [!d.seungChaModuleIH.trim(), "승차(모듈) IH"],
+        [!d.hacha1ModuleIH.trim(), "하차1(모듈) IH"],
+        [!d.hacha2ModuleIH.trim(), "하차2(모듈) IH"],
+      );
+    }
     if (d.model === "B700") req.push([!d.citsIH.trim(), "CITS 처리부 IH"]);
   }
   // 점검 항목 전부 ○ 체크 필수

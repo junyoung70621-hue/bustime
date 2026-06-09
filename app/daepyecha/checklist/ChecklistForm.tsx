@@ -6,7 +6,7 @@
 //   8열: 번호·케이스명·점검대상·점검항목·점검방법(아이콘)·점검POINT·O/X시간·비고
 //   html2canvas 안전: table + rowspan + inline-block.
 // ─────────────────────────────────────────────────────────────
-import { CK_MODELS_DATA, rowCheckKey, modelFamily, hasSeunghacha } from "@/lib/checklist/templates";
+import { CK_MODELS_DATA, rowCheckKey, modelFamily, hasSeunghacha, hasSeunghachaModule } from "@/lib/checklist/templates";
 import type { CkFormState, CkRowDef, CkCellKey } from "@/lib/checklist/types";
 
 const c = "border border-slate-700 px-1.5 py-1 align-middle";
@@ -145,6 +145,7 @@ function Cell({
 //   B710/B800: 표출단말기 IH / 표출(모듈) IH 를 각 행에 따로, CITS 없음
 function PyochulHeader({ data }: { data: CkFormState }) {
   const hasCits = data.model === "B700";
+  const hasMod = hasSeunghachaModule(data.model);
   return (
     <table className="mb-2 w-full border-collapse text-[11px]">
       <tbody>
@@ -165,8 +166,17 @@ function PyochulHeader({ data }: { data: CkFormState }) {
         <tr>
           <td className={`${labCell} whitespace-pre-line`}>노선번호{"\n"}차량번호</td>
           <td className={cMid}>{data.routeNo} / {data.vehicleNo}</td>
-          <td className={labCell}>승.하차단말기(모듈) IH</td>
-          <td className={cMid}>{data.seungChaModuleIH} / {data.hacha1ModuleIH} / {data.hacha2ModuleIH}</td>
+          {hasMod ? (
+            <>
+              <td className={labCell}>승.하차단말기(모듈) IH</td>
+              <td className={cMid}>{data.seungChaModuleIH} / {data.hacha1ModuleIH} / {data.hacha2ModuleIH}</td>
+            </>
+          ) : (
+            <>
+              <td className={labCell} />
+              <td className={cMid} />
+            </>
+          )}
           {hasCits ? (
             <>
               <td className={`${labCell} whitespace-pre-line`}>표출단말기 IH{"\n"}표출(모듈) IH</td>
