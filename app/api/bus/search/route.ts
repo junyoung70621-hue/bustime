@@ -7,7 +7,12 @@
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, type VehicleRow, type RouteRow, type Station } from "@/lib/supabase";
-import { fetchBusPositions, PublicApiAuthError, type BusPosition } from "@/lib/publicApi";
+import {
+  fetchBusPositions,
+  PublicApiAuthError,
+  PublicApiQuotaError,
+  type BusPosition,
+} from "@/lib/publicApi";
 import { calcEta } from "@/lib/eta";
 import { classifyRoute } from "@/lib/routeType";
 
@@ -121,24 +126,28 @@ export async function GET(req: NextRequest) {
   }
   const positionsByRoute = new Map<string, BusPosition[]>();
   let authError: PublicApiAuthError | null = null;
+  let quotaError: PublicApiQuotaError | null = null;
 
   await Promise.all(
     routeIds.map(async (rid) => {
       try {
         positionsByRoute.set(rid, await fetchBusPositions(rid));
       } catch (e) {
-        if (e instanceof PublicApiAuthError) authError = e;
+        if (e instanceof PublicApiQuotaError) quotaError = e;
+        else if (e instanceof PublicApiAuthError) authError = e;
         else console.error(`route ${rid} 위치 조회 실패`, e);
         positionsByRoute.set(rid, []);
       }
     }),
   );
 
-  // 키 미등록/인증 실패여도 결과는 막지 않고, 차량/노선 정보는 보여준다.
-  // (실시간 위치/ETA만 비활성 → 상단 배너로 안내)
-  const notice = authError
-    ? "실시간 위치 서버 인증 대기 중입니다(공공 API 키 동기화 전). 차량·노선 정보만 표시되며 ETA는 키 활성화 후 자동 표시됩니다."
-    : null;
+  // 한도 초과/키 미등록이어도 결과는 막지 않고, 차량/노선 정보는 보여준다.
+  // (실시간 위치/ETA만 비활성 → 상단 배너로 정확한 원인 안내)
+  const notice = quotaError
+    ? "오늘 실시간 위치 조회 한도를 초과했습니다. 매일 자정(KST) 이후 자동 복구되며, 그때까지 ETA·실시간 위치가 표시되지 않을 수 있습니다."
+    : authError
+      ? "실시간 위치 서버 인증 대기 중입니다(공공 API 키 동기화 전). 차량·노선 정보만 표시되며 ETA는 키 활성화 후 자동 표시됩니다."
+      : null;
 
   // 2-2) 앞차 기록: 조회된 노선의 모든 실시간 차량에 대해 "바로 앞차"를 그날(KST)자로 upsert.
   //   GPS/LTE 신호가 잡힐 때 기록해 두고, 끊겼을 때(아래 2-3) 마지막 기록을 보여주기 위함.

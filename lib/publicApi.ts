@@ -14,6 +14,9 @@ const ENDPOINTS = [
 /** 공공 API 인증 실패(키 미등록/오류)를 구분하기 위한 에러 */
 export class PublicApiAuthError extends Error {}
 
+/** 공공 API 일일 호출 한도 초과(LIMITED NUMBER...EXCEEDS)를 구분하기 위한 에러 */
+export class PublicApiQuotaError extends Error {}
+
 /** 실시간 위치 1대분. (필요한 필드만 추림) */
 export type BusPosition = {
   vehId: string; // 차량 ID
@@ -68,6 +71,11 @@ export async function fetchBusPositions(busRouteId: string): Promise<BusPosition
   const headerCd = String(json?.msgHeader?.headerCd ?? "");
   const headerMsg: string = json?.msgHeader?.headerMsg ?? "";
   if (headerCd && headerCd !== "0") {
+    // 일일 호출 한도 초과(메시지에 LIMITED NUMBER/EXCEEDS, 인증모듈 코드 22).
+    // 메시지에 '인증'이 함께 들어와 아래 인증분기와 겹치므로 한도 초과를 먼저 판별.
+    if (/LIMITED NUMBER|EXCEEDS|초과|트래픽|\(22\)/i.test(headerMsg)) {
+      throw new PublicApiQuotaError(headerMsg || "공공 API 호출 한도 초과");
+    }
     // 인증/키 미등록 계열은 별도 에러로 올려 UI에서 명확히 안내
     if (headerCd === "7" || /인증|KEY|REGISTERED/i.test(headerMsg)) {
       throw new PublicApiAuthError(headerMsg || "공공 API 인증 실패");
