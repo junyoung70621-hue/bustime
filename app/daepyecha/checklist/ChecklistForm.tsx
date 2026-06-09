@@ -160,21 +160,17 @@ function PyochulHeader({ data }: { data: CkFormState }) {
         <tr>
           <td className={labCell}>설치시간</td>
           <td className={cMid}>{data.installTime}</td>
-          <td className={labCell}>승.하차단말기 IH</td>
-          <td className={cMid}>{data.seungChaIH} / {data.hacha1IH} / {data.hacha2IH}</td>
+          {/* B710은 모듈 IH 칸이 없어 승.하차단말기 IH 칸을 아래 행까지 세로 병합 */}
+          <td className={labCell} rowSpan={hasMod ? 1 : 2}>승.하차단말기 IH</td>
+          <td className={cMid} rowSpan={hasMod ? 1 : 2}>{data.seungChaIH} / {data.hacha1IH} / {data.hacha2IH}</td>
         </tr>
         <tr>
           <td className={`${labCell} whitespace-pre-line`}>노선번호{"\n"}차량번호</td>
           <td className={cMid}>{data.routeNo} / {data.vehicleNo}</td>
-          {hasMod ? (
+          {hasMod && (
             <>
               <td className={labCell}>승.하차단말기(모듈) IH</td>
               <td className={cMid}>{data.seungChaModuleIH} / {data.hacha1ModuleIH} / {data.hacha2ModuleIH}</td>
-            </>
-          ) : (
-            <>
-              <td className={labCell} />
-              <td className={cMid} />
             </>
           )}
           {hasCits ? (
