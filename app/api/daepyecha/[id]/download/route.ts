@@ -30,11 +30,21 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // 저장 파일명: "운수사명 날짜.pdf" (파일명 사용 불가 문자만 정리)
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
   const filename = `${safe(data.operator || "확인서")} 자재지급확인서_${data.issued_date || ""}`.trim() + ".pdf";
-  const signed = await admin.storage
-    .from(BUCKET)
-    .createSignedUrl(data.pdf_path, 60, { download: filename });
-  if (signed.error || !signed.data) {
-    return NextResponse.json({ error: "서명 URL 생성 실패" }, { status: 500 });
+
+  // 파일 바이트를 직접 받아 우리 응답으로 스트리밍한다.
+  // (Supabase signed URL 의 download 옵션은 한글 파일명을 %EC… 로 깨뜨림)
+  const dl = await admin.storage.from(BUCKET).download(data.pdf_path);
+  if (dl.error || !dl.data) {
+    return NextResponse.json({ error: "파일 다운로드 실패" }, { status: 500 });
   }
-  return NextResponse.redirect(signed.data.signedUrl);
+
+  const buf = await dl.data.arrayBuffer();
+  const ascii = filename.replace(/[^\x20-\x7E]/g, "_"); // 구형 브라우저용 폴백
+  const encoded = encodeURIComponent(filename);
+  return new NextResponse(buf, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`,
+    },
+  });
 }
