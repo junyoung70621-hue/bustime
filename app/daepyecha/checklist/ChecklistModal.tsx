@@ -179,7 +179,7 @@ export default function ChecklistModal({
                     <L t="운전자단말기 IH"><input value={data.driverIH} onChange={(e) => patch({ driverIH: e.target.value })} className={inp} /></L>
                     {hasSeunghacha(data.model) && (
                       <div className="col-span-2">
-                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2)</span>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
                         <div className="flex gap-1">
                           <input value={data.seungChaIH} onChange={(e) => patch({ seungChaIH: e.target.value })} placeholder="승차" className={inp} />
                           <input value={data.hacha1IH} onChange={(e) => patch({ hacha1IH: e.target.value })} placeholder="하차1" className={inp} />
@@ -192,7 +192,7 @@ export default function ChecklistModal({
                   <>
                     <L t="LTE모뎀 IH"><input value={data.lteModemIH} onChange={(e) => patch({ lteModemIH: e.target.value })} className={inp} /></L>
                     <div className="col-span-2">
-                      <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2)</span>
+                      <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
                       <div className="flex gap-1">
                         <input value={data.seungChaIH} onChange={(e) => patch({ seungChaIH: e.target.value })} placeholder="승차" className={inp} />
                         <input value={data.hacha1IH} onChange={(e) => patch({ hacha1IH: e.target.value })} placeholder="하차1" className={inp} />
@@ -201,7 +201,7 @@ export default function ChecklistModal({
                     </div>
                     {hasSeunghachaModule(data.model) && (
                       <div className="col-span-2">
-                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2)</span>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
                         <div className="flex gap-1">
                           <input value={data.seungChaModuleIH} onChange={(e) => patch({ seungChaModuleIH: e.target.value })} placeholder="승차" className={inp} />
                           <input value={data.hacha1ModuleIH} onChange={(e) => patch({ hacha1ModuleIH: e.target.value })} placeholder="하차1" className={inp} />
@@ -362,28 +362,16 @@ function firstMissing(d: CkFormState): string | null {
     [has("version") && !d.fwVer.trim(), "FW버전"],
     [has("version") && !d.osVer.trim(), "OS버전"],
   ];
+  // 승.하차단말기 IH / 승.하차단말기(모듈) IH 는 도어 수가 기종마다 달라 선택 입력(필수 아님)
   if (modelFamily(d.model) === "driver") {
     req.push([!d.driverIH.trim(), "운전자단말기 IH"]);
-    if (hasSeunghacha(d.model)) {
-      req.push([!d.seungChaIH.trim(), "승차 IH"], [!d.hacha1IH.trim(), "하차1 IH"], [!d.hacha2IH.trim(), "하차2 IH"]);
-    }
   } else if (d.model) {
     req.push(
       [!d.lteModemIH.trim(), "LTE모뎀 IH"],
-      [!d.seungChaIH.trim(), "승차 IH"],
-      [!d.hacha1IH.trim(), "하차1 IH"],
-      [!d.hacha2IH.trim(), "하차2 IH"],
       [!d.pyochulIH.trim(), "표출단말기 IH"],
       [!d.pyochulModuleIH.trim(), "표출(모듈) IH"],
       [!d.mainIH.trim(), "메인단말기 IH"],
     );
-    if (hasSeunghachaModule(d.model)) {
-      req.push(
-        [!d.seungChaModuleIH.trim(), "승차(모듈) IH"],
-        [!d.hacha1ModuleIH.trim(), "하차1(모듈) IH"],
-        [!d.hacha2ModuleIH.trim(), "하차2(모듈) IH"],
-      );
-    }
     if (d.model === "B700") req.push([!d.citsIH.trim(), "CITS 처리부 IH"]);
   }
   // 점검 항목 전부 ○ 체크 필수
