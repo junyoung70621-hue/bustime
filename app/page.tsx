@@ -237,7 +237,14 @@ function EtaCard({ r }: { r: SearchResult }) {
         <p className="mt-1 text-xs text-slate-400">노선: {r.routeName}</p>
         {/* 신호 없을 때: 오늘 기록해 둔 앞차로 위치 가늠 */}
         {r.frontTail && (
-          <FrontCar tail={r.frontTail} gap={r.frontGap} live={r.frontLive} at={r.frontAt} prominent />
+          <FrontCar
+            tail={r.frontTail}
+            gap={r.frontGap}
+            live={r.frontLive}
+            at={r.frontAt}
+            etaMinutes={r.frontEtaMinutes}
+            prominent
+          />
         )}
         {/* 마을버스: 신호 없어도 정류장(회차지) 목록은 표시 */}
         {r.isVillage && (
@@ -506,12 +513,14 @@ function FrontCar({
   gap,
   live,
   at,
+  etaMinutes,
   prominent,
 }: {
   tail: string;
   gap: number;
   live: boolean;
   at: string | null;
+  etaMinutes?: number | null;
   prominent?: boolean;
 }) {
   const gapLabel = gap > 0 ? `${gap}정거장 앞` : "";
@@ -533,6 +542,11 @@ function FrontCar({
             </span>
           )}
         </p>
+        {etaMinutes != null && (
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            앞차 종점도착 ≈ {arrivalClock(etaMinutes)}
+          </p>
+        )}
         <p className="mt-1 text-[11px] text-slate-400">※ 배차 상황에 따라 정확하지 않을 수 있어요</p>
       </div>
     );

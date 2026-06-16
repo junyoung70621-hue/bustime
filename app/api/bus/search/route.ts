@@ -44,6 +44,7 @@ export type SearchResult = {
   frontGap: number; // 앞차까지 구간(정거장) 수. 0 = 미상
   frontLive: boolean; // true=지금 실시간 앞차 / false=오늘 기록된 마지막 앞차
   frontAt: string | null; // 기록 앞차일 때 기록 시각(KST "HH:MM"). 실시간이면 null
+  frontEtaMinutes: number | null; // 앞차의 종점 도착 예정(분). 앞차가 실시간에 안 잡히면 null
 };
 
 // 정류장 리스트에 띄울 차량 1대(노선 내 다른 차량 포함).
@@ -229,12 +230,16 @@ export async function GET(req: NextRequest) {
     let frontGap = 0;
     let frontLive = false;
     let frontAt: string | null = null;
+    // 앞차의 종점 도착 예정(분). 앞차의 '현재' 실시간 위치를 찾아 계산. 못 찾으면 null.
+    let frontEtaMinutes: number | null = null;
     if (pos) {
       const front = frontCarOf(positions, pos.sectOrd);
       if (front) {
         frontTail = (front.plainNo ?? "").slice(-4);
         frontGap = front.sectOrd - pos.sectOrd;
         frontLive = true;
+        const fe = calcEta(front.sectOrd, lastSeq);
+        if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
       }
     } else if (v.vehicle_id) {
       const h = histByVehicle.get(v.vehicle_id);
@@ -242,6 +247,12 @@ export async function GET(req: NextRequest) {
         frontTail = h.front_tail;
         frontGap = h.front_gap;
         frontAt = fmtKstHm(h.recorded_at);
+        // 신호없는 내 차: 아침에 기록된 앞차(끝4자리)를 현재 실시간 위치에서 찾아 ETA 계산.
+        const frontPos = positions.find((p) => (p.plainNo ?? "").endsWith(h.front_tail));
+        if (frontPos) {
+          const fe = calcEta(frontPos.sectOrd, lastSeq);
+          if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
+        }
       }
     }
 
@@ -267,6 +278,7 @@ export async function GET(req: NextRequest) {
       frontGap,
       frontLive,
       frontAt,
+      frontEtaMinutes,
     };
   });
 
