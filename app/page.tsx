@@ -543,7 +543,10 @@ function FrontCar({
           )}
         </p>
         {etaMinutes != null && (
-          <p className="mt-1 text-xs font-semibold text-slate-500">
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
+            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-600 ring-1 ring-emerald-200">
+              앞차 차량시간 표시중
+            </span>
             앞차 종점도착 ≈ {arrivalClock(etaMinutes)}
           </p>
         )}
