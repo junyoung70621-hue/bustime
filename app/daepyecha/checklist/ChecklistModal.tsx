@@ -8,8 +8,18 @@
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
-import { CK_MODELS, CK_MODELS_DATA, emptyCkForm, rowCheckKey, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
-import type { CkFormState, CkModel, CkRow, VehicleType, OX } from "@/lib/checklist/types";
+import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
+import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
+
+// 활성 점검행: 태그리스면 공통 태그리스 양식, 아니면 선택 모델 점검표
+function activeRows(d: CkFormState): CkRowDef[] {
+  if (d.tagless) return CK_TAGLESS_DATA.rows;
+  return d.model ? CK_MODELS_DATA[d.model]?.rows ?? [] : [];
+}
+// 체크키용 모델 키(태그리스는 모델 무관 단일 키)
+function checkKeyModel(d: CkFormState): string {
+  return d.tagless ? TAGLESS_CHECK_KEY : d.model;
+}
 import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
@@ -69,10 +79,11 @@ export default function ChecklistModal({
   const toggleCheck = (k: string) => setData((d) => ({ ...d, checks: { ...d.checks, [k]: !d.checks[k] } }));
   const checkAll = () =>
     setData((d) => {
-      const rows = d.model ? CK_MODELS_DATA[d.model]?.rows ?? [] : [];
+      const rows = activeRows(d);
+      const km = checkKeyModel(d);
       const next: Record<string, boolean> = {};
       rows.forEach((r, i) => {
-        if (r.kind === "check") next[rowCheckKey(d.model, i)] = true;
+        if (r.kind === "check" && !r.mergeUp && rowCheckActive(r, d.model)) next[rowCheckKey(km, i)] = true;
       });
       return { ...d, checks: next };
     });
@@ -89,7 +100,7 @@ export default function ChecklistModal({
       const dataForDb: CkFormState = { ...data, installerSig: null, operatorSig: null };
       const meta = {
         center: data.center,
-        operator: data.operatorName,
+        operator: data.tagless ? `(태그리스)${data.operatorName}` : data.operatorName,
         model: data.model,
         install_date: data.installDate,
         vehicle_numbers: data.vehicleNo,
@@ -114,8 +125,8 @@ export default function ChecklistModal({
     }
   }
 
-  // 선택 모델의 점검행 → 케이스별 그룹
-  const modelRows = (data.model ? CK_MODELS_DATA[data.model]?.rows ?? [] : []).map((r, i) => ({ r, i }));
+  // 활성 점검행 → 케이스별 그룹
+  const modelRows = activeRows(data).map((r, i) => ({ r, i }));
   const groups: { no: number; label: string; items: { r: (typeof modelRows)[number]["r"]; i: number }[] }[] = [];
   for (const x of modelRows) {
     let g = groups.find((g) => g.no === x.r.caseNo);
@@ -156,11 +167,18 @@ export default function ChecklistModal({
                   </select>
                 </L>
                 <L t="모델">
-                  <select value={data.model} onChange={(e) => { const m = e.target.value as CkModel; patch({ model: m, checks: {}, ...presetFor(m) }); }} className={inp}>
+                  <select value={data.model} onChange={(e) => { const m = e.target.value as CkModel; const tagless = data.tagless && TAGLESS_MODELS.includes(m); patch({ model: m, checks: {}, tagless, ...presetFor(m) }); }} className={inp}>
                     <option value="">선택</option>
                     {CK_MODELS.map((m) => (<option key={m} value={m}>{m}</option>))}
                   </select>
                 </L>
+                {TAGLESS_MODELS.includes(data.model) && (
+                  <label className="col-span-2 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5">
+                    <input type="checkbox" checked={data.tagless} onChange={(e) => patch({ tagless: e.target.checked, checks: {} })} className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-bold text-indigo-700">태그리스 양식으로 작성</span>
+                    <span className="text-xs text-indigo-500">(비콘/BLE 전용 점검표)</span>
+                  </label>
+                )}
                 <L t="설치일"><input type="date" value={data.installDate} onChange={(e) => patch({ installDate: e.target.value })} className={inp} /></L>
                 <L t="설치시간">
                   <div className="flex gap-1">
@@ -174,7 +192,14 @@ export default function ChecklistModal({
                 <L t="차량번호"><input value={data.vehicleNo} onChange={(e) => patch({ vehicleNo: e.target.value })} placeholder="예: 70-1234" className={inp} /></L>
                 <L t="좌석수"><input value={data.seatCount} onChange={(e) => patch({ seatCount: e.target.value })} inputMode="numeric" className={inp} /></L>
 
-                {modelFamily(data.model) === "driver" ? (
+                {data.tagless ? (
+                  <>
+                    <L t="허브 IH"><input value={data.hubIH} onChange={(e) => patch({ hubIH: e.target.value })} className={inp} /></L>
+                    <div className="col-span-2">
+                      <L t="타사 장비 설치여부 — 선택"><input value={data.otherEquip} onChange={(e) => patch({ otherEquip: e.target.value })} placeholder="메가박스 TV/대수, 공기청정기 등" className={inp} /></L>
+                    </div>
+                  </>
+                ) : modelFamily(data.model) === "driver" ? (
                   <>
                     <L t="운전자단말기 IH"><input value={data.driverIH} onChange={(e) => patch({ driverIH: e.target.value })} className={inp} /></L>
                     {hasSeunghacha(data.model) && (
@@ -213,7 +238,7 @@ export default function ChecklistModal({
                 )}
               </div>
 
-              {modelFamily(data.model) === "pyochul" && (
+              {!data.tagless && modelFamily(data.model) === "pyochul" && (
                 <div className="rounded-xl border border-slate-200 p-3">
                   <p className="mb-2 text-sm font-bold text-slate-600">IH (프리셋 자동입력, 수정 가능)</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -227,25 +252,47 @@ export default function ChecklistModal({
                 </div>
               )}
 
-              {/* 케이스1 차량특성 */}
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-sm font-bold text-slate-600">차량특성</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <L t="차량 특성">
-                    <select value={data.vehicleType} onChange={(e) => patch({ vehicleType: e.target.value as VehicleType })} className={inp}>
-                      <option value="">선택</option>
-                      {["일반A", "저상B", "전기차C", "기타D"].map((v) => (<option key={v} value={v}>{v}</option>))}
-                    </select>
-                  </L>
-                  <L t="격벽설치(O/X)">
-                    <select value={data.partition} onChange={(e) => patch({ partition: e.target.value as OX })} className={inp}>
-                      <option value="">선택</option><option value="O">O</option><option value="X">X</option>
-                    </select>
-                  </L>
-                  <L t="제조사"><input value={data.manufacturer} onChange={(e) => patch({ manufacturer: e.target.value })} className={inp} /></L>
-                  <L t="모델명"><input value={data.modelName} onChange={(e) => patch({ modelName: e.target.value })} className={inp} /></L>
+              {data.tagless && (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="mb-2 text-sm font-bold text-slate-600">FW 버전</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <L t="태그리스 FW"><input value={data.taglessFw} onChange={(e) => patch({ taglessFw: e.target.value })} className={inp} /></L>
+                    <L t="비콘 FW"><input value={data.beaconFw} onChange={(e) => patch({ beaconFw: e.target.value })} className={inp} /></L>
+                    <L t="AFC FW"><input value={data.afcFw} onChange={(e) => patch({ afcFw: e.target.value })} className={inp} /></L>
+                    <L t="G/W FW"><input value={data.gwFw} onChange={(e) => patch({ gwFw: e.target.value })} className={inp} /></L>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* 케이스1 차량특성 (태그리스는 제조사/차종만) */}
+              {data.tagless ? (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="mb-2 text-sm font-bold text-slate-600">차량 정보</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <L t="차량 제조사"><input value={data.manufacturer} onChange={(e) => patch({ manufacturer: e.target.value })} className={inp} /></L>
+                    <L t="차종"><input value={data.modelName} onChange={(e) => patch({ modelName: e.target.value })} className={inp} /></L>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="mb-2 text-sm font-bold text-slate-600">차량특성</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <L t="차량 특성">
+                      <select value={data.vehicleType} onChange={(e) => patch({ vehicleType: e.target.value as VehicleType })} className={inp}>
+                        <option value="">선택</option>
+                        {["일반A", "저상B", "전기차C", "기타D"].map((v) => (<option key={v} value={v}>{v}</option>))}
+                      </select>
+                    </L>
+                    <L t="격벽설치(O/X)">
+                      <select value={data.partition} onChange={(e) => patch({ partition: e.target.value as OX })} className={inp}>
+                        <option value="">선택</option><option value="O">O</option><option value="X">X</option>
+                      </select>
+                    </L>
+                    <L t="제조사"><input value={data.manufacturer} onChange={(e) => patch({ manufacturer: e.target.value })} className={inp} /></L>
+                    <L t="모델명"><input value={data.modelName} onChange={(e) => patch({ modelName: e.target.value })} className={inp} /></L>
+                  </div>
+                </div>
+              )}
 
               {/* 점검 항목 (모델별) */}
               {data.model ? (
@@ -255,20 +302,30 @@ export default function ChecklistModal({
                     <button type="button" onClick={checkAll} className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white">전체 ○</button>
                   </div>
                   {groups.map((g) => {
-                    const renderable = g.items.filter((x) => ["check", "time", "version"].includes(x.r.kind));
+                    const renderable = g.items.filter((x) => ["check", "time", "version", "appVehicleNo"].includes(x.r.kind));
                     if (renderable.length === 0) return null;
                     return (
                       <div key={g.no} className="border-b border-slate-100 last:border-0">
                         <p className="bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500">{g.no}. {g.label}</p>
                         {renderable.map(({ r, i }) => {
                           if (r.kind === "check") {
-                            const key = rowCheckKey(data.model, i);
-                            const label = [r.target, r.item || r.method].filter(Boolean).join(" · ").replace(/\s+/g, " ");
+                            if (r.mergeUp) return null; // 셀병합 행은 위 체크행을 따라가므로 별도 체크박스 없음
+                            if (!rowCheckActive(r, data.model)) return null; // CITS 등 모델 전용 행은 타모델에서 체크 미노출
+                            const key = rowCheckKey(checkKeyModel(data), i);
+                            const label = [r.target, r.item || r.method].filter(Boolean).join(" · ").replace(/\s+/g, " ") || r.point.split(/\r?\n/)[0];
                             return (
                               <label key={i} className="flex items-center gap-2 px-3 py-1.5">
                                 <input type="checkbox" checked={!!data.checks[key]} onChange={() => toggleCheck(key)} className="h-4 w-4 shrink-0" />
                                 <span className="min-w-0 flex-1 text-sm text-slate-700">{label}</span>
                               </label>
+                            );
+                          }
+                          if (r.kind === "appVehicleNo") {
+                            return (
+                              <div key={i} className="px-3 py-2">
+                                <span className="mb-1 block text-xs font-semibold text-slate-600">앱 내 설치 차량번호</span>
+                                <input value={data.appVehicleNo} onChange={(e) => patch({ appVehicleNo: e.target.value })} placeholder="예: 747208" className={inp} />
+                              </div>
                             );
                           }
                           if (r.kind === "time") {
@@ -305,10 +362,12 @@ export default function ChecklistModal({
                 <div className="mt-2"><L t="수량"><input value={data.etcQty} onChange={(e) => patch({ etcQty: e.target.value })} className={inp} /></L></div>
               </div>
 
-              {/* 서명 */}
+              {/* 서명 (태그리스 양식은 설치자 확인만) */}
               <div className="grid grid-cols-2 gap-2">
                 <SignBtn label="설치자 확인" name={data.installerName} done={!!data.installerSig} onClick={() => setPad("installer")} />
-                <SignBtn label="운수사 확인" name={data.operatorSignerName} done={!!data.operatorSig} onClick={() => setPad("operator")} />
+                {!data.tagless && (
+                  <SignBtn label="운수사 확인" name={data.operatorSignerName} done={!!data.operatorSig} onClick={() => setPad("operator")} />
+                )}
               </div>
 
               {/* 미리보기(캡처 대상) */}
@@ -342,7 +401,8 @@ export default function ChecklistModal({
 
 // 특이사항(etcContent/etcQty) 외 모든 필드 필수 검증. 첫 누락 항목명 반환(없으면 null)
 function firstMissing(d: CkFormState): string | null {
-  const rows = d.model ? CK_MODELS_DATA[d.model]?.rows ?? [] : [];
+  const rows = activeRows(d);
+  const km = checkKeyModel(d);
   const has = (k: string) => rows.some((r) => r.kind === k);
   const req: [boolean, string][] = [
     [!d.center, "센터"],
@@ -356,14 +416,24 @@ function firstMissing(d: CkFormState): string | null {
     [has("seat") && !d.seatCount.trim(), "좌석수"],
     [has("vehicleType") && !d.vehicleType, "차량 특성"],
     [has("partition") && !d.partition, "격벽설치(O/X)"],
-    [!d.manufacturer.trim(), "제조사"],
-    [!d.modelName.trim(), "모델명"],
+    [!d.manufacturer.trim(), d.tagless ? "차량 제조사" : "제조사"],
+    [!d.modelName.trim(), d.tagless ? "차종" : "모델명"],
     [has("time") && !d.timeValue.trim(), "시간확인"],
     [has("version") && !d.fwVer.trim(), "FW버전"],
     [has("version") && !d.osVer.trim(), "OS버전"],
+    [has("appVehicleNo") && !d.appVehicleNo.trim(), "앱 차량번호"],
   ];
   // 승.하차단말기 IH / 승.하차단말기(모듈) IH 는 도어 수가 기종마다 달라 선택 입력(필수 아님)
-  if (modelFamily(d.model) === "driver") {
+  if (d.tagless) {
+    // 타사 장비 설치여부는 없을 수 있어 선택 입력
+    req.push(
+      [!d.hubIH.trim(), "허브 IH"],
+      [!d.taglessFw.trim(), "태그리스 FW"],
+      [!d.beaconFw.trim(), "비콘 FW"],
+      [!d.afcFw.trim(), "AFC FW"],
+      [!d.gwFw.trim(), "G/W FW"],
+    );
+  } else if (modelFamily(d.model) === "driver") {
     req.push([!d.driverIH.trim(), "운전자단말기 IH"]);
   } else if (d.model) {
     req.push(
@@ -375,12 +445,10 @@ function firstMissing(d: CkFormState): string | null {
     if (d.model === "B700") req.push([!d.citsIH.trim(), "CITS 처리부 IH"]);
   }
   // 점검 항목 전부 ○ 체크 필수
-  const unchecked = rows.filter((r, i) => r.kind === "check" && !d.checks[rowCheckKey(d.model, i)]).length;
+  const unchecked = rows.filter((r, i) => r.kind === "check" && !r.mergeUp && rowCheckActive(r, d.model) && !d.checks[rowCheckKey(km, i)]).length;
   req.push([unchecked > 0, `점검 항목 ${unchecked}개 미체크 (전부 ○ 필요)`]);
-  req.push(
-    [!d.installerName || !d.installerSig, "설치자 서명"],
-    [!d.operatorSignerName || !d.operatorSig, "운수사 서명"],
-  );
+  req.push([!d.installerName || !d.installerSig, "설치자 서명"]);
+  if (!d.tagless) req.push([!d.operatorSignerName || !d.operatorSig, "운수사 서명"]);
   const m = req.find(([bad]) => bad);
   return m ? m[1] : null;
 }

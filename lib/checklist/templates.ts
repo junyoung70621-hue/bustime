@@ -2,9 +2,10 @@
 // 설치 완료 체크리스트 — 모델 메타 + 공용 상수
 //   점검표 본문은 models.generated.ts(엑셀 자동추출)에서 모델별로 제공.
 // ─────────────────────────────────────────────────────────────
-import type { CkModel, CkFormState } from "./types";
+import type { CkModel, CkFormState, CkRowDef } from "./types";
 
 export { CK_MODELS, CK_MODELS_DATA } from "./models.generated";
+export { CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY } from "./tagless";
 
 // Storage 키(ASCII)용 모델 코드
 export const CK_MODEL_CODE: Record<string, string> = {
@@ -53,6 +54,14 @@ export function emptyCkForm(today: string): CkFormState {
   return {
     center: "",
     model: "",
+    tagless: false,
+    hubIH: "",
+    otherEquip: "",
+    taglessFw: "",
+    beaconFw: "",
+    afcFw: "",
+    gwFw: "",
+    appVehicleNo: "",
     installDate: today,
     installTime: "",
     routeNo: "",
@@ -94,4 +103,16 @@ export function emptyCkForm(today: string): CkFormState {
 /** 점검 행의 안정적 체크 키(모델 무관, 내용 기반) */
 export function rowCheckKey(model: CkModel, index: number): string {
   return `${model}#${index}`;
+}
+
+/** 점검 행이 현재 모델에서 체크 대상인지(onlyModel 지정 시 그 모델에서만). 예: CITS는 B700 전용 */
+export function rowCheckActive(r: CkRowDef, model: string): boolean {
+  return !r.onlyModel || r.onlyModel === model;
+}
+
+/** mergeUp 행의 O/X·체크는 바로 위 체크행을 따라감. 제어하는 행 인덱스 반환(아니면 자기 자신) */
+export function controllingCheckIndex(rows: CkRowDef[], i: number): number {
+  let j = i;
+  while (j > 0 && rows[j].mergeUp) j--;
+  return j;
 }

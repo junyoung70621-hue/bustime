@@ -6,7 +6,7 @@
 //   8열: 번호·케이스명·점검대상·점검항목·점검방법(아이콘)·점검POINT·O/X시간·비고
 //   html2canvas 안전: table + rowspan + inline-block.
 // ─────────────────────────────────────────────────────────────
-import { CK_MODELS_DATA, rowCheckKey, modelFamily, hasSeunghacha, hasSeunghachaModule } from "@/lib/checklist/templates";
+import { CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_CHECK_KEY, rowCheckKey, rowCheckActive, controllingCheckIndex, modelFamily, hasSeunghacha, hasSeunghachaModule } from "@/lib/checklist/templates";
 import type { CkFormState, CkRowDef, CkCellKey } from "@/lib/checklist/types";
 
 const c = "border border-slate-700 px-1.5 py-1 align-middle";
@@ -15,7 +15,7 @@ const hd = "border border-slate-700 px-1 py-1 bg-slate-100 text-center font-bold
 const labCell = "border border-slate-700 px-1.5 py-1 align-middle bg-slate-50 font-bold text-center";
 
 export default function ChecklistForm({ data }: { data: CkFormState }) {
-  const def = data.model ? CK_MODELS_DATA[data.model] : undefined;
+  const def = data.tagless ? CK_TAGLESS_DATA : data.model ? CK_MODELS_DATA[data.model] : undefined;
   const title = def?.title ?? `${data.model || ""} 단말기 체크 리스트`;
   const rows: CkRowDef[] = def?.rows ?? [];
 
@@ -25,8 +25,10 @@ export default function ChecklistForm({ data }: { data: CkFormState }) {
 
       <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{title}</div>
 
-      {/* 상단 헤더 (계열별) */}
-      {modelFamily(data.model) === "pyochul" ? (
+      {/* 상단 헤더 (태그리스 / 표출 / 운전자 계열) */}
+      {data.tagless ? (
+        <TaglessHeader data={data} />
+      ) : modelFamily(data.model) === "pyochul" ? (
         <PyochulHeader data={data} />
       ) : (
         <DriverHeader data={data} />
@@ -43,9 +45,9 @@ export default function ChecklistForm({ data }: { data: CkFormState }) {
             <th className={`${hd} w-[4%]`} colSpan={2}>케이스</th>
             <th className={`${hd} w-[12%]`}>{"점검대상\n단말기"}</th>
             <th className={`${hd} w-[11%]`}>점검항목</th>
-            <th className={`${hd} w-[15%]`}>점검방법</th>
-            <th className={`${hd} w-[30%]`}>점검POINT</th>
-            <th className={`${hd} w-[8%]`}>{"O/X, 시간"}</th>
+            <th className={`${hd} w-[14.7%]`}>점검방법</th>
+            <th className={`${hd} w-[32%]`}>점검POINT</th>
+            <th className={`${hd} w-[6.3%]`}>{"O/X, 시간"}</th>
             <th className={`${hd} w-[10%]`}>비고</th>
           </tr>
         </thead>
@@ -65,7 +67,7 @@ export default function ChecklistForm({ data }: { data: CkFormState }) {
                 )}
               </Cell>
               <Cell r={r} col="point" cls={`${c} whitespace-pre-line`}>{pointFor(r, data)}</Cell>
-              <Cell r={r} col="ox" cls={`${cMid} font-bold`}>{oxFor(r, data, i)}</Cell>
+              <Cell r={r} col="ox" cls={`${cMid} font-bold`}>{oxFor(r, data, i, rows)}</Cell>
               <Cell r={r} col="bigo" cls={`${c} whitespace-pre-line text-[9px] text-slate-500`}>{bigoFor(r, data)}</Cell>
             </tr>
           ))}
@@ -82,11 +84,13 @@ function methodFor(r: CkRowDef): React.ReactNode {
 
 function pointFor(r: CkRowDef, data: CkFormState): React.ReactNode {
   if (r.kind === "version") return `FW버전 [ ${data.fwVer || "-"} ]  OS버전 [ ${data.osVer || "-"} ]`;
+  if (r.kind === "taglessFwVer") return `태그리스 FW : ${data.taglessFw || "-"}     비콘 FW : ${data.beaconFw || "-"}`;
+  if (r.kind === "deviceFwVer") return `AFC : ${data.afcFw || "-"}     G/W : ${data.gwFw || "-"}`;
   if (r.kind === "etc") return data.etcContent || r.point;
   return r.point;
 }
 
-function oxFor(r: CkRowDef, data: CkFormState, i: number): React.ReactNode {
+function oxFor(r: CkRowDef, data: CkFormState, i: number, rows: CkRowDef[]): React.ReactNode {
   switch (r.kind) {
     case "vehicleType":
       return data.vehicleType ? data.vehicleType.slice(-1) : "";
@@ -94,10 +98,16 @@ function oxFor(r: CkRowDef, data: CkFormState, i: number): React.ReactNode {
       return data.partition;
     case "time":
       return data.timeValue;
+    case "appVehicleNo":
+      return data.appVehicleNo;
     case "installer":
       return <span className="font-bold">설치자 확인</span>;
-    case "check":
-      return data.checks[rowCheckKey(data.model, i)] ? "○" : "";
+    case "check": {
+      const ci = controllingCheckIndex(rows, i); // 셀병합 행은 위 체크행을 따라감
+      const ctrl = rows[ci];
+      if (!rowCheckActive(ctrl, data.model)) return ""; // 모델 전용 행(CITS=B700)은 타모델에서 체크칸 비움
+      return data.checks[rowCheckKey(data.tagless ? TAGLESS_CHECK_KEY : data.model, ci)] ? "○" : "";
+    }
     default:
       return "";
   }
@@ -243,6 +253,42 @@ function DriverHeader({ data }: { data: CkFormState }) {
               <td className={cMid} colSpan={3}>{data.driverIH}</td>
             </>
           )}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+// 태그리스 계열 헤더 (허브 IH / 타사 장비 설치여부 / 차량 제조사·차종 / 설치자 확인)
+function TaglessHeader({ data }: { data: CkFormState }) {
+  return (
+    <table className="mb-2 w-full border-collapse text-[11px]">
+      <tbody>
+        <tr>
+          <td className={`${labCell} w-[12%]`}>설치일</td>
+          <td className={`${cMid} w-[20%]`}>{fmtDate(data.installDate)}</td>
+          <td className={`${labCell} w-[14%]`}>운수사명</td>
+          <td className={`${cMid} w-[20%]`}>{data.operatorName}</td>
+          <td className={`${labCell} w-[12%]`} rowSpan={2}>설치자 확인</td>
+          <td className={cMid} rowSpan={2}><SealStack name={data.installerName} sig={data.installerSig} /></td>
+        </tr>
+        <tr>
+          <td className={labCell}>설치시간</td>
+          <td className={cMid}>{data.installTime}</td>
+          <td className={labCell}>운수사ID</td>
+          <td className={cMid}>{data.operatorId}</td>
+        </tr>
+        <tr>
+          <td className={`${labCell} whitespace-pre-line`}>노선번호{"\n"}차량번호</td>
+          <td className={cMid}>{data.routeNo} / {data.vehicleNo}</td>
+          <td className={labCell}>차량 제조사 / 차종</td>
+          <td className={cMid} colSpan={3}>{data.manufacturer} / {data.modelName}</td>
+        </tr>
+        <tr>
+          <td className={labCell}>허브 IH</td>
+          <td className={cMid}>{data.hubIH}</td>
+          <td className={labCell}>타사 장비 설치여부</td>
+          <td className={cMid} colSpan={3}>{data.otherEquip}</td>
         </tr>
       </tbody>
     </table>

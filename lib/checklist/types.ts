@@ -16,7 +16,11 @@ export type CkRowKind =
   | "seat"
   | "etc"
   | "installer"
-  | "check";
+  | "check"
+  // 태그리스 전용 입력 행
+  | "taglessFwVer" // 태그리스 FW / 비콘 FW
+  | "deviceFwVer" // AFC FW / G/W FW
+  | "appVehicleNo"; // 앱 내 설치 차량번호 입력
 export type CkBigoKind = "manufacturer" | "modelName" | "seat" | "etcQty" | "static";
 // 셀별 병합: 해당 키가 있으면 그 셀을 [rowspan, colspan]로 렌더, 없으면 병합에 가려져 렌더 안 함
 export type CkCellKey = "caseNo" | "caseLabel" | "target" | "item" | "method" | "point" | "ox" | "bigo";
@@ -29,6 +33,8 @@ export type CkRowDef = {
   point: string;
   icon?: string;
   kind: CkRowKind;
+  onlyModel?: CkModel; // 지정 시 해당 모델에서만 체크 가능(예: CITS는 B700 전용)
+  mergeUp?: boolean; // 셀병합 행: 별도 체크칸 없이 바로 위 체크행을 따라감
   bigo: string;
   bigoKind: CkBigoKind;
   m: Partial<Record<CkCellKey, [number, number]>>; // 원본 병합 반영(rowspan,colspan)
@@ -51,6 +57,16 @@ export type CheckItem = {
 export type CkFormState = {
   center: Center | "";
   model: CkModel | "";
+  // 태그리스(비콘/BLE) 양식 여부 — 표출형(B700/B710/B800)에서만 선택 가능
+  tagless: boolean;
+  // 태그리스 전용 입력 (tagless=true일 때만 사용)
+  hubIH: string; // 허브 IH
+  otherEquip: string; // 타사 장비 설치여부(메가박스 TV/대수, 공기청정기 등)
+  taglessFw: string; // 태그리스 FW
+  beaconFw: string; // 비콘 FW
+  afcFw: string; // AFC FW
+  gwFw: string; // G/W FW
+  appVehicleNo: string; // 앱 내 설치 차량번호(예: 747208)
   // 상단 헤더
   installDate: string; // 설치일 YYYY-MM-DD (기본 오늘)
   installTime: string; // 설치시간 HH:MM
