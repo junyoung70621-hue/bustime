@@ -13,6 +13,7 @@ export type ItemTemplate = {
   name: string; // 품목명
   bigo: string; // 비고(용도 설명)
   hasNewReused: boolean; // 신규/재활용 선택 대상 여부
+  perUnit?: number; // 차량 1대당 기본 수량(미지정 시 1)
 };
 
 /** 작성/저장되는 품목 1행 */
@@ -22,6 +23,7 @@ export type ItemState = {
   qty: number; // 수량
   hasNewReused: boolean;
   newReused: NewReused | null; // hasNewReused일 때만 값
+  perUnit?: number; // 차량 1대당 기본 수량(대수 변경 시 qty 재계산용, 미지정 시 1)
 };
 
 /** 작성 중 폼 전체 상태 */
@@ -30,6 +32,7 @@ export type FormState = {
   operator: string; // 운수사
   officeType: OfficeType; // 본사/영업소
   purpose: Purpose; // 대폐차/증차
+  tagless: boolean; // 태그리스(비콘/BLE) 자재 양식 여부
   model: Model | "";
   vehicleCount: number; // 차량 대수
   vehicleNumbers: string; // 차량번호(선택)
@@ -50,6 +53,7 @@ export type ConfirmationRow = {
   office_type: string; // 본사/영업소
   model: Model;
   purpose: string; // 대폐차/증차
+  tagless: boolean; // 태그리스 양식 여부
   vehicle_count: number;
   vehicle_numbers: string;
   items: ItemState[];

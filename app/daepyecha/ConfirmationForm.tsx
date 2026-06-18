@@ -13,7 +13,12 @@ const td = "border border-slate-800 px-2 py-1 align-middle";
 const th = "border border-slate-800 px-1 py-1 bg-slate-100 font-bold text-center";
 
 export default function ConfirmationForm({ data }: { data: FormState }) {
-  const title = data.model ? `${data.model} 설치 자재 지급확인서` : "설치 자재 지급확인서";
+  const title = data.tagless
+    ? "태그리스 설치 자재 지급확인서"
+    : data.model
+      ? `${data.model} 설치 자재 지급확인서`
+      : "설치 자재 지급확인서";
+  const purposeText = data.tagless ? `${data.purpose}(태그리스)` : data.purpose;
   return (
     <div
       className="w-[794px] bg-white px-10 py-8 text-[13px] text-slate-900"
@@ -33,7 +38,7 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
         {data.operator && data.officeType ? ` ${data.officeType}` : ""}
       </div>
       <div className="mb-1.5 text-[14px]">
-        <span className="font-bold">2. 용　도 :</span>　{data.purpose}
+        <span className="font-bold">2. 용　도 :</span>　{purposeText}
       </div>
       <div className="mb-1.5 text-[14px]">
         <span className="font-bold">3. 차량번호 :</span> {data.vehicleNumbers || ""}

@@ -7,7 +7,7 @@
 //   ※ 서명은 DB에 저장되지 않으므로 수정 시 다시 서명해야 함.
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
-import { itemsForModel } from "@/lib/daepyecha/templates";
+import { itemsForModel, itemsForTagless } from "@/lib/daepyecha/templates";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
 import type { ConfirmationRow, FormState, Model, NewReused } from "@/lib/daepyecha/types";
 import Step1Input from "./Step1Input";
@@ -25,6 +25,7 @@ function emptyForm(): FormState {
     operator: "",
     officeType: "본사",
     purpose: "대폐차",
+    tagless: false,
     model: "",
     vehicleCount: 0,
     vehicleNumbers: "",
@@ -75,6 +76,7 @@ export default function DaepyechaModal({
           operator: r.operator,
           officeType: (r.office_type as FormState["officeType"]) || "본사",
           purpose: (r.purpose as FormState["purpose"]) || "대폐차",
+          tagless: r.tagless ?? false,
           model: r.model,
           vehicleCount: r.vehicle_count,
           vehicleNumbers: r.vehicle_numbers,
@@ -101,13 +103,33 @@ export default function DaepyechaModal({
 
   function onModelChange(m: Model) {
     touched.current = [];
-    setData((d) => ({ ...d, model: m, items: itemsForModel(m, d.vehicleCount) }));
+    setData((d) => ({
+      ...d,
+      model: m,
+      // 태그리스면 모델을 바꿔도 품목은 태그리스 공통 품목 유지
+      items: d.tagless ? itemsForTagless(d.vehicleCount) : itemsForModel(m, d.vehicleCount),
+    }));
+  }
+  function onToggleTagless(next: boolean) {
+    touched.current = [];
+    setData((d) => ({
+      ...d,
+      tagless: next,
+      items: next
+        ? itemsForTagless(d.vehicleCount)
+        : d.model
+          ? itemsForModel(d.model, d.vehicleCount)
+          : [],
+    }));
   }
   function onCountChange(n: number) {
     setData((d) => ({
       ...d,
       vehicleCount: n,
-      items: d.items.map((it, i) => (touched.current[i] ? it : { ...it, qty: n })),
+      // 미수정 행은 대당 기본수량 × 대수로 재계산(perUnit 미지정 시 1)
+      items: d.items.map((it, i) =>
+        touched.current[i] ? it : { ...it, qty: (it.perUnit ?? 1) * n },
+      ),
     }));
   }
   function onItemQty(i: number, qty: number) {
@@ -145,6 +167,7 @@ export default function DaepyechaModal({
         office_type: data.officeType,
         model: data.model,
         purpose: data.purpose,
+        tagless: data.tagless,
         vehicle_count: data.vehicleCount,
         vehicle_numbers: data.vehicleNumbers,
         items: data.items,
@@ -189,6 +212,7 @@ export default function DaepyechaModal({
               data={data}
               patch={patch}
               onModelChange={onModelChange}
+              onToggleTagless={onToggleTagless}
               onCountChange={onCountChange}
               onItemQty={onItemQty}
               onItemNR={onItemNR}

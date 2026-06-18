@@ -11,6 +11,7 @@ export default function Step1Input({
   data,
   patch,
   onModelChange,
+  onToggleTagless,
   onCountChange,
   onItemQty,
   onItemNR,
@@ -20,6 +21,7 @@ export default function Step1Input({
   data: FormState;
   patch: (p: Partial<FormState>) => void;
   onModelChange: (m: Model) => void;
+  onToggleTagless: (next: boolean) => void;
   onCountChange: (n: number) => void;
   onItemQty: (i: number, qty: number) => void;
   onItemNR: (i: number, v: NewReused) => void;
@@ -72,6 +74,18 @@ export default function Step1Input({
           </select>
         </Field>
       </div>
+
+      {/* 태그리스(비콘/BLE) 자재 양식 토글 — 체크 시 품목이 태그리스 자재로 전환 */}
+      <label className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5">
+        <input
+          type="checkbox"
+          checked={data.tagless}
+          onChange={(e) => onToggleTagless(e.target.checked)}
+          className="h-4 w-4 shrink-0"
+        />
+        <span className="text-sm font-bold text-indigo-700">태그리스 자재로 작성</span>
+        <span className="text-xs text-indigo-500">(비콘/허브/케이블)</span>
+      </label>
 
       <Field label="운수사 / 구분">
         <div className="flex gap-2">
@@ -140,10 +154,11 @@ export default function Step1Input({
       </Field>
 
       {/* 품목 */}
-      {data.model ? (
+      {data.items.length > 0 ? (
         <div className="rounded-xl border border-slate-200">
           <p className="border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-600">
-            품목 ({data.items.length}) — 수량은 대수로 자동 입력, 수정 가능
+            품목 ({data.items.length}) —{" "}
+            {data.tagless ? "대당 기본수량 × 대수 자동 입력, 수정 가능" : "수량은 대수로 자동 입력, 수정 가능"}
           </p>
           <ul className="flex flex-col divide-y divide-slate-100">
             {data.items.map((it, i) => (
@@ -180,7 +195,7 @@ export default function Step1Input({
         </div>
       ) : (
         <p className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-400">
-          모델을 선택하면 품목이 표시됩니다.
+          모델을 선택하거나 태그리스를 체크하면 품목이 표시됩니다.
         </p>
       )}
 

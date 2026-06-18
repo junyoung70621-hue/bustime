@@ -84,6 +84,27 @@ export const MODEL_TEMPLATES: Record<Model, ItemTemplate[]> = {
   ],
 };
 
+// ─────────────────────────────────────────────────────────────
+// 태그리스(비콘/BLE) 설치 자재 — 모델 무관 공통 품목
+//   원본 엑셀 "태그리스 자재지급확인서" 추출. perUnit = 차량 1대당 기본 수량.
+//   하드웨어(비콘/허브/안테나)는 재활용 가능 → hasNewReused, 케이블은 소모성.
+// ─────────────────────────────────────────────────────────────
+export const TAGLESS_ITEMS: ItemTemplate[] = [
+  { name: "1x3 비콘단말기", bigo: "* 비콘", hasNewReused: true, perUnit: 1 },
+  { name: "단일 비콘 단말기", bigo: "* 비콘", hasNewReused: true, perUnit: 3 },
+  { name: "V형 비콘단말기", bigo: "* 비콘", hasNewReused: true, perUnit: 3 },
+  { name: "태그리스 허브", bigo: "* 허브", hasNewReused: true, perUnit: 1 },
+  { name: "외부안테나", bigo: "* 비콘 연결 안테나", hasNewReused: true, perUnit: 3 },
+  { name: "B700/B800 Main HUB 5M", bigo: "* 통합단말기 to 허브 연결 케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 0 5M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 1 4M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 2 6M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 3 16M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 4 6M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 5 12M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+  { name: "HUB & Beacon 6 16M", bigo: "* 허브 to 비콘 연결케이블", hasNewReused: false, perUnit: 1 },
+];
+
 /** 모델 선택 시 빈 품목 상태 생성(수량은 차량 대수로 채움) */
 export function itemsForModel(model: Model, qty: number): import("./types").ItemState[] {
   return MODEL_TEMPLATES[model].map((t) => ({
@@ -92,5 +113,18 @@ export function itemsForModel(model: Model, qty: number): import("./types").Item
     qty,
     hasNewReused: t.hasNewReused,
     newReused: t.hasNewReused ? "신규" : null,
+    perUnit: 1,
+  }));
+}
+
+/** 태그리스 품목 상태 생성(수량 = 대당 기본수량 × 차량 대수) */
+export function itemsForTagless(count: number): import("./types").ItemState[] {
+  return TAGLESS_ITEMS.map((t) => ({
+    name: t.name,
+    bigo: t.bigo,
+    qty: (t.perUnit ?? 1) * count,
+    hasNewReused: t.hasNewReused,
+    newReused: t.hasNewReused ? "신규" : null,
+    perUnit: t.perUnit ?? 1,
   }));
 }

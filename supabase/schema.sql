@@ -58,6 +58,7 @@ create table if not exists public.daepyecha_confirmations (
   office_type     text not null default '',  -- 본사/영업소
   model           text not null,             -- B620/B700/B710/B800
   purpose         text not null default '대폐차', -- 대폐차/증차
+  tagless         boolean not null default false, -- 태그리스(비콘/BLE) 자재 양식 여부
   vehicle_count   int  not null default 0,
   vehicle_numbers text not null default '',
   items           jsonb not null default '[]'::jsonb, -- [{name,bigo,qty,newReused?}]
@@ -71,6 +72,9 @@ create table if not exists public.daepyecha_confirmations (
   modified_by     text not null default '',  -- 수정자명(수정 시 필수)
   deleted_at      timestamptz                -- 휴지통: null=정상, 값 있으면 휴지통
 );
+-- 기존 테이블 마이그레이션: 태그리스 컬럼 추가(이미 있으면 무시)
+alter table public.daepyecha_confirmations
+  add column if not exists tagless boolean not null default false;
 create index if not exists idx_dpc_center  on public.daepyecha_confirmations (center);
 create index if not exists idx_dpc_created on public.daepyecha_confirmations (created_at desc);
 create index if not exists idx_dpc_issued  on public.daepyecha_confirmations (issued_date desc);

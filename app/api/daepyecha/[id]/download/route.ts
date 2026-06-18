@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const sb = getSupabase();
   const { data, error } = await sb
     .from("daepyecha_confirmations")
-    .select("pdf_path, operator, issued_date")
+    .select("pdf_path, operator, issued_date, tagless")
     .eq("id", params.id)
     .single();
   if (error || !data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -27,9 +27,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   } catch {
     return NextResponse.json({ error: "다운로드 비활성: SERVICE_ROLE_KEY 없음" }, { status: 503 });
   }
-  // 저장 파일명: "운수사명 날짜.pdf" (파일명 사용 불가 문자만 정리)
+  // 저장 파일명: "(태그리스)운수사명 자재지급확인서_날짜.pdf" (파일명 사용 불가 문자만 정리)
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
-  const filename = `${safe(data.operator || "확인서")} 자재지급확인서_${data.issued_date || ""}`.trim() + ".pdf";
+  const prefix = data.tagless ? "(태그리스)" : "";
+  const filename = `${prefix}${safe(data.operator || "확인서")} 자재지급확인서_${data.issued_date || ""}`.trim() + ".pdf";
 
   // 파일 바이트를 직접 받아 우리 응답으로 스트리밍한다.
   // (Supabase signed URL 의 download 옵션은 한글 파일명을 %EC… 로 깨뜨림)

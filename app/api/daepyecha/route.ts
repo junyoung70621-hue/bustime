@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
+import { relayPdf, pdfFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
   let query = sb
     .from("daepyecha_confirmations")
     .select(
-      "id, center, operator, office_type, model, purpose, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at",
+      "id, center, operator, office_type, model, purpose, tagless, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at",
     )
     .order("created_at", { ascending: false })
     .limit(500);
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
       office_type: meta.office_type ?? "",
       model: meta.model,
       purpose: meta.purpose ?? "대폐차",
+      tagless: meta.tagless ?? false,
       vehicle_count: meta.vehicle_count ?? 0,
       vehicle_numbers: meta.vehicle_numbers ?? "",
       items: meta.items ?? [],
@@ -124,5 +126,24 @@ export async function POST(req: NextRequest) {
     await sb!.storage.from(BUCKET).remove([path]); // 롤백
     return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
   }
+
+  // Teams 자동 업로드(이메일 릴레이). 실패해도 저장은 성공 처리.
+  await relayPdf({
+    fileName: pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless)),
+    pdf: bytes,
+    recordId: id,
+    center: String(meta.center ?? ""),
+    operator: String(meta.operator ?? ""),
+    officeType: String(meta.office_type ?? ""),
+    model: String(meta.model ?? ""),
+    purpose: meta.tagless
+      ? `${String(meta.purpose ?? "대폐차")}(태그리스)`
+      : String(meta.purpose ?? "대폐차"),
+    issuedDate: String(meta.issued_date ?? ""),
+    vehicleNumbers: String(meta.vehicle_numbers ?? ""),
+    vehicleCount: Number(meta.vehicle_count ?? 0),
+    action: "created",
+  });
+
   return NextResponse.json({ id: data.id });
 }

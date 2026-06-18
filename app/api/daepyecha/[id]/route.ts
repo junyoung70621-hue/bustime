@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { relayPdf, pdfFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       office_type: meta.office_type ?? "",
       model: meta.model,
       purpose: meta.purpose ?? "대폐차",
+      tagless: meta.tagless ?? false,
       vehicle_count: meta.vehicle_count ?? 0,
       vehicle_numbers: meta.vehicle_numbers ?? "",
       items: meta.items ?? [],
@@ -105,6 +107,25 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     .eq("id", params.id);
 
   if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+
+  // Teams 자동 업로드(수정본, 이메일 릴레이). 실패해도 저장은 성공 처리.
+  await relayPdf({
+    fileName: pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless)),
+    pdf: bytes,
+    recordId: params.id,
+    center: String(meta.center ?? ""),
+    operator: String(meta.operator ?? ""),
+    officeType: String(meta.office_type ?? ""),
+    model: String(meta.model ?? ""),
+    purpose: meta.tagless
+      ? `${String(meta.purpose ?? "대폐차")}(태그리스)`
+      : String(meta.purpose ?? "대폐차"),
+    issuedDate: String(meta.issued_date ?? ""),
+    vehicleNumbers: String(meta.vehicle_numbers ?? ""),
+    vehicleCount: Number(meta.vehicle_count ?? 0),
+    action: "updated",
+  });
+
   return NextResponse.json({ id: params.id });
 }
 

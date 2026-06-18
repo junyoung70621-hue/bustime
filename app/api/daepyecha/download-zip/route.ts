@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rows, error } = await sb
     .from("daepyecha_confirmations")
-    .select("id, operator, issued_date, pdf_path")
+    .select("id, operator, issued_date, pdf_path, tagless")
     .in("id", ids);
   if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
   if (!rows || rows.length === 0) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
     const dl = await sb.storage.from(BUCKET).download(r.pdf_path);
     if (dl.error || !dl.data) continue;
     const buf = new Uint8Array(await dl.data.arrayBuffer());
-    let name = `${safe(r.operator || "확인서")} 자재지급확인서_${r.issued_date || ""}`.trim() + ".pdf";
+    const px = r.tagless ? "(태그리스)" : "";
+    let name = `${px}${safe(r.operator || "확인서")} 자재지급확인서_${r.issued_date || ""}`.trim() + ".pdf";
     // 동일 파일명 충돌 방지
     let n = 2;
-    while (used.has(name)) name = `${safe(r.operator || "확인서")} 자재지급확인서_${r.issued_date || ""} (${n++}).pdf`;
+    while (used.has(name)) name = `${px}${safe(r.operator || "확인서")} 자재지급확인서_${r.issued_date || ""} (${n++}).pdf`;
     used.add(name);
     zip.file(name, buf);
   }

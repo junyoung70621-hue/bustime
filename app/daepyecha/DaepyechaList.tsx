@@ -262,6 +262,11 @@ export default function DaepyechaList() {
                     <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">
                       {r.purpose}
                     </span>
+                    {r.tagless && (
+                      <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                        태그리스
+                      </span>
+                    )}
                     <span className="truncate font-bold text-slate-800">
                       {r.operator}
                       {r.office_type ? ` ${r.office_type}` : ""}
