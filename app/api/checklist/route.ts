@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
+import { sendRelayMail, checklistFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -108,5 +109,22 @@ export async function POST(req: NextRequest) {
     await sb!.storage.from(BUCKET).remove([path]);
     return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
   }
+
+  // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
+  const center = String(meta.center ?? "");
+  const operator = String(meta.operator ?? "");
+  const installDate = String(meta.install_date ?? "");
+  const tagless = Boolean(meta.tagless);
+  await sendRelayMail({
+    subject: `대폐차|${center}|${operator}|${installDate}`,
+    text:
+      `설치완료 체크리스트${tagless ? "(태그리스)" : ""}\n` +
+      `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
+      `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
+      `설치자: ${String(meta.installer_name ?? "")}\nID: ${id}`,
+    fileName: checklistFileName(operator, installDate, tagless),
+    pdf: bytes,
+  });
+
   return NextResponse.json({ id: data.id });
 }

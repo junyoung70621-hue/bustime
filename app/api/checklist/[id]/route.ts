@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendRelayMail, checklistFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -82,6 +83,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     })
     .eq("id", params.id);
   if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+
+  // Teams 자동 업로드(이메일 릴레이) — 수정본.
+  const center = String(meta.center ?? "");
+  const operator = String(meta.operator ?? "");
+  const installDate = String(meta.install_date ?? "");
+  const tagless = Boolean(meta.tagless);
+  await sendRelayMail({
+    subject: `대폐차|${center}|${operator}|${installDate}`,
+    text:
+      `설치완료 체크리스트${tagless ? "(태그리스)" : ""} (수정본)\n` +
+      `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
+      `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
+      `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
+    fileName: checklistFileName(operator, installDate, tagless),
+    pdf: bytes,
+  });
+
   return NextResponse.json({ id: params.id });
 }
 
