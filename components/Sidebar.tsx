@@ -14,6 +14,7 @@ const NAV = [
   { href: "/", label: "차량도착정보 조회", emoji: "🚌" },
   { href: "/daepyecha", label: "대폐차(수도권)", emoji: "📄" },
   { href: "/daepyecha-region", label: "대폐차(지역)", emoji: "📍" },
+  { href: "/daepyecha-express", label: "대폐차(고속/시외)", emoji: "🚍" },
 ];
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

@@ -12,21 +12,23 @@ export default function SignaturePad({
   initialName,
   onConfirm,
   onClose,
+  signOnly = false,
 }: {
   title: string;
   initialName: string;
   onConfirm: (name: string, sig: string) => void;
   onClose: () => void;
+  signOnly?: boolean; // true면 이름 없이 터치 서명만
 }) {
   const ref = useRef<SignatureCanvas>(null);
   const [name, setName] = useState(initialName);
   const [err, setErr] = useState<string | null>(null);
 
   function confirm() {
-    if (!name.trim()) return setErr("이름(정자)을 입력하세요.");
+    if (!signOnly && !name.trim()) return setErr("이름(정자)을 입력하세요.");
     const pad = ref.current;
     if (!pad || pad.isEmpty()) return setErr("서명을 그려주세요.");
-    onConfirm(name.trim(), pad.toDataURL("image/png"));
+    onConfirm(signOnly ? "" : name.trim(), pad.toDataURL("image/png"));
   }
 
   return (
@@ -34,13 +36,17 @@ export default function SignaturePad({
       <div className="safe-bottom w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <h3 className="text-base font-bold text-slate-800">{title}</h3>
 
-        <label className="mt-3 block text-sm font-semibold text-slate-600">이름</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="예: 홍길동"
-          className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        />
+        {!signOnly && (
+          <>
+            <label className="mt-3 block text-sm font-semibold text-slate-600">이름</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 홍길동"
+              className="mt-1 h-11 w-full rounded-xl border border-slate-300 px-3 text-base outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+          </>
+        )}
 
         <label className="mt-3 block text-sm font-semibold text-slate-600">서명 (인)</label>
         <div className="mt-1 overflow-hidden rounded-xl border border-slate-300 bg-slate-50">

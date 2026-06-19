@@ -18,6 +18,7 @@ export const REGION_CODE: Record<string, string> = {
   포항: "pohang",
   안동: "andong",
   김해: "gimhae",
+  고속시외: "gosi",
 };
 
 /** 모델별 헤더 구성 */

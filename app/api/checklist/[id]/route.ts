@@ -89,10 +89,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
   const tagless = Boolean(meta.tagless);
-  const gongyong = meta.variant === "gongyong";
-  const regional = meta.variant === "regional";
-  const gongyongDoc = String(meta.doc_label || "설치확인서");
-  const docName = gongyong ? gongyongDoc : `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""}`;
+  const variant = String(meta.variant ?? "default");
+  const isConfirmDoc = variant === "gongyong" || variant === "gosi";
+  const docLabel = String(meta.doc_label || "설치확인서");
+  const docName = isConfirmDoc ? docLabel : `설치완료 체크리스트${variant === "regional" ? "(지역)" : tagless ? "(태그리스)" : ""}`;
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
@@ -100,7 +100,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
-    fileName: gongyong ? gongyongFileName(operator, installDate, gongyongDoc) : checklistFileName(operator, installDate, tagless),
+    fileName: isConfirmDoc ? gongyongFileName(operator, installDate, docLabel) : checklistFileName(operator, installDate, tagless),
     pdf: bytes,
   });
 
