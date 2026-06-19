@@ -35,6 +35,7 @@ export type RegFormState = {
   driverFw: string;
   // 케이스1 차량특성
   vehicleType: string; // 선택 라벨(예: "현대 저상 A") — O/X엔 끝글자 표기
+  vehicleTypeEtc: string; // 차종 "기타" 선택 시 직접 입력값(비고열 표기)
   partition: OX; // 격벽설치 유무
   // 점검 항목 O/X (key → checked)
   checks: Record<string, boolean>;

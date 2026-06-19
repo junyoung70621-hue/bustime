@@ -220,10 +220,15 @@ export default function RegionalChecklistModal({
                 <div className="grid grid-cols-2 gap-2">
                   {cfg && cfg.vehicleTypeOptions.length > 0 && (
                     <L t="차량 특성(차종)">
-                      <select value={data.vehicleType} onChange={(e) => patch({ vehicleType: e.target.value })} className={inp}>
+                      <select value={data.vehicleType} onChange={(e) => patch({ vehicleType: e.target.value, ...(e.target.value === "기타" ? {} : { vehicleTypeEtc: "" }) })} className={inp}>
                         <option value="">선택</option>
                         {cfg.vehicleTypeOptions.map((v) => (<option key={v} value={v}>{v}</option>))}
                       </select>
+                    </L>
+                  )}
+                  {cfg && cfg.vehicleTypeOptions.length > 0 && data.vehicleType === "기타" && (
+                    <L t="기타 차종 (직접 입력 → 비고)">
+                      <input value={data.vehicleTypeEtc} onChange={(e) => patch({ vehicleTypeEtc: e.target.value })} placeholder="차종을 입력하세요" className={inp} />
                     </L>
                   )}
                   <L t="격벽설치(O/X)">
@@ -313,6 +318,7 @@ function firstMissing(d: RegFormState): string | null {
     [!d.inspectDate, "점검일"],
     [!d.vehicleNo.trim(), "차량번호"],
     [hasVt && !d.vehicleType, "차량 특성(차종)"],
+    [hasVt && d.vehicleType === "기타" && !d.vehicleTypeEtc.trim(), "기타 차종(직접 입력)"],
     [!d.partition, "격벽설치(O/X)"],
   ];
   // 점검 항목 전부 ○ 체크 필수

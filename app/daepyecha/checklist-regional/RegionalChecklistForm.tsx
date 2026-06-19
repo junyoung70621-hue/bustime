@@ -55,7 +55,7 @@ export default function RegionalChecklistForm({ data }: { data: RegFormState }) 
               <Cell r={r} col="method" cls={`${c} whitespace-pre-line`}>{r.method}</Cell>
               <Cell r={r} col="point" cls={`${c} whitespace-pre-line`}>{pointFor(r, data)}</Cell>
               <Cell r={r} col="ox" cls={`${cMid} font-bold`}>{oxFor(r, data, i)}</Cell>
-              <Cell r={r} col="bigo" cls={`${c} whitespace-pre-line text-[9px] text-slate-500`}>{r.bigo}</Cell>
+              <Cell r={r} col="bigo" cls={`${c} whitespace-pre-line text-[9px] text-slate-500`}>{bigoFor(r, data)}</Cell>
             </tr>
           ))}
         </tbody>
@@ -69,10 +69,22 @@ function pointFor(r: CkRowDef, data: RegFormState): React.ReactNode {
   return r.point;
 }
 
+function bigoFor(r: CkRowDef, data: RegFormState): React.ReactNode {
+  // 차종 "기타" 선택 시 직접 입력한 차종을 비고열에 표기("차종 기재" 자리에)
+  if (r.kind === "vehicleType" && data.vehicleType === "기타" && data.vehicleTypeEtc.trim()) {
+    return data.vehicleTypeEtc;
+  }
+  return r.bigo;
+}
+
 function oxFor(r: CkRowDef, data: RegFormState, i: number): React.ReactNode {
   switch (r.kind) {
-    case "vehicleType":
-      return data.vehicleType ? data.vehicleType.trim().slice(-1) : "";
+    case "vehicleType": {
+      if (!data.vehicleType) return "";
+      if (data.vehicleType === "기타") return "기타"; // 차종 상세는 비고열에 표기
+      const last = data.vehicleType.trim().slice(-1);
+      return /[A-Za-z]/.test(last) ? last.toUpperCase() : "";
+    }
     case "partition":
       return data.partition;
     case "etc":

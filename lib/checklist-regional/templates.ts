@@ -68,6 +68,7 @@ export function emptyRegForm(today: string): RegFormState {
     hacha2Fw: "",
     driverFw: "",
     vehicleType: "",
+    vehicleTypeEtc: "",
     partition: "",
     checks: {},
     etcContent: "",
