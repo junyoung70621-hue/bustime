@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendRelayMail, checklistFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -89,15 +89,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
   const tagless = Boolean(meta.tagless);
+  const gongyong = meta.variant === "gongyong";
   const regional = meta.variant === "regional";
+  const docName = gongyong ? "설치확인서" : `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""}`;
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
-      `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""} (수정본)\n` +
+      `${docName} (수정본)\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
-    fileName: checklistFileName(operator, installDate, tagless),
+    fileName: gongyong ? gongyongFileName(operator, installDate) : checklistFileName(operator, installDate, tagless),
     pdf: bytes,
   });
 

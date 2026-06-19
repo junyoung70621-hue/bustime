@@ -9,7 +9,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
-import { sendRelayMail, checklistFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       operator_signer_name: meta.operator_signer_name ?? "",
       data: meta.data ?? {},
       pdf_path: path,
-      variant: meta.variant === "regional" ? "regional" : "default",
+      variant: meta.variant === "regional" || meta.variant === "gongyong" ? meta.variant : "default",
     })
     .select("id")
     .single();
@@ -121,15 +121,17 @@ export async function POST(req: NextRequest) {
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
   const tagless = Boolean(meta.tagless);
+  const gongyong = meta.variant === "gongyong";
   const regional = meta.variant === "regional";
+  const docName = gongyong ? "설치확인서" : `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""}`;
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
-      `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""}\n` +
+      `${docName}\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${id}`,
-    fileName: checklistFileName(operator, installDate, tagless),
+    fileName: gongyong ? gongyongFileName(operator, installDate) : checklistFileName(operator, installDate, tagless),
     pdf: bytes,
   });
 

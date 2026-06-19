@@ -7,14 +7,16 @@
 import { useState } from "react";
 import RegionalJajaeList from "./jajae/RegionalJajaeList";
 import RegionalChecklistList from "@/app/daepyecha/checklist-regional/RegionalChecklistList";
+import GongyongList from "./gongyong/GongyongList";
 
 const TABS = [
   { key: "jajae", label: "자재 지급확인서" },
   { key: "checklist", label: "설치 완료 체크리스트" },
+  { key: "gongyong", label: "설치확인서" },
 ] as const;
 
 export default function RegionTabs() {
-  const [tab, setTab] = useState<"jajae" | "checklist">("jajae");
+  const [tab, setTab] = useState<"jajae" | "checklist" | "gongyong">("jajae");
   return (
     <main className="safe-x safe-top safe-bottom mx-auto flex min-h-[100dvh] w-full max-w-lg flex-col gap-3">
       <div className="flex gap-1.5 pl-12">
@@ -22,7 +24,7 @@ export default function RegionTabs() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`h-10 flex-1 rounded-xl text-sm font-bold transition ${
+            className={`h-10 flex-1 whitespace-nowrap rounded-xl px-1.5 text-xs font-bold transition sm:text-sm ${
               tab === t.key ? "bg-brand-600 text-white shadow-sm" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
             }`}
           >
@@ -31,7 +33,7 @@ export default function RegionTabs() {
         ))}
       </div>
 
-      {tab === "jajae" ? <RegionalJajaeList /> : <RegionalChecklistList />}
+      {tab === "jajae" ? <RegionalJajaeList /> : tab === "checklist" ? <RegionalChecklistList /> : <GongyongList />}
     </main>
   );
 }

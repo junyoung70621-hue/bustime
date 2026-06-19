@@ -25,6 +25,12 @@ export function checklistFileName(operator: string, installDate: string, tagless
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
+/** 설치확인서(다차량 공용 양식) 파일명: "설치확인서 운수사명 날짜.pdf" */
+export function gongyongFileName(operator: string, installDate: string): string {
+  const parts = ["설치확인서", safeName(operator), installDate || ""].filter(Boolean);
+  return `${parts.join(" ")}.pdf`;
+}
+
 /** 저수준: 지정 메일함으로 PDF 첨부 메일 발송(Teams 릴레이). 실패해도 throw하지 않음.
  *  제목 형식 "대폐차|{센터}|..." 를 그대로 쓰면 기존 플로우가 센터별 폴더로 저장. */
 export async function sendRelayMail(opts: {
