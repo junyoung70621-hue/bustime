@@ -25,9 +25,9 @@ export function checklistFileName(operator: string, installDate: string, tagless
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
-/** 설치확인서(다차량 공용 양식) 파일명: "설치확인서 운수사명 날짜.pdf" */
-export function gongyongFileName(operator: string, installDate: string): string {
-  const parts = ["설치확인서", safeName(operator), installDate || ""].filter(Boolean);
+/** 설치확인서(다차량 양식) 파일명: "{설치확인서|철수확인서} 운수사명 날짜.pdf" */
+export function gongyongFileName(operator: string, installDate: string, docName = "설치확인서"): string {
+  const parts = [docName, safeName(operator), installDate || ""].filter(Boolean);
   return `${parts.join(" ")}.pdf`;
 }
 

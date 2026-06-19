@@ -14,10 +14,15 @@ export type GongyongVehicle = {
   main: string; // 운전자조작기(버스메인) IH
   sc1: string; // 승하차단말기1
   sc2: string; // 승하차단말기2
-  sc3: string; // 승하차단말기3
-  gpsAnt: string; // GPS 안테나(수량)
-  partition: string; // ㄷ자 격벽용(수량)
+  sc3: string; // 승하차단말기3 (공용)
+  gpsAnt: string; // GPS 안테나(수량) (공용)
+  partition: string; // ㄷ자 격벽용(수량) (공용)
+  iface: string; // 인터페이스 (포항)
+  modem: string; // 모뎀 (포항)
 };
+
+/** 포항 양식 = 설치/철수 확인서 */
+export type GongyongDocType = "설치" | "철수";
 
 /** 작성/수정 폼 전체 상태 */
 export type GongyongForm = {
@@ -32,6 +37,11 @@ export type GongyongForm = {
   routeType: string; // 노선구분
   customerRequest: string; // 고객 요청 사항
   etc: string; // 기타 사항
+  // ── 포항 전용(region==='포항') ──
+  docType: GongyongDocType; // 설치/철수 확인서 구분
+  companyName: string; // 회사명
+  officeName: string; // 영업소명
+  newTerminal: boolean; // 단말기구분 □신단말기
   vehicles: GongyongVehicle[]; // 차량 목록(최대 10)
   // 서명
   operatorSignerName: string; // 운수사 확인

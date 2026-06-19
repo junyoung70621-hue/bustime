@@ -16,6 +16,7 @@ const hd = "border border-slate-700 px-1 py-1 bg-slate-100 text-center font-bold
 const chk = (on: boolean) => (on ? "☑" : "□");
 
 export default function GongyongForm({ data }: { data: GongyongForm }) {
+  if (data.region === "포항") return <PohangForm data={data} />;
   const busTypes: GongyongBusType[] = GONGYONG_BUS_TYPES;
   return (
     <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
@@ -129,6 +130,103 @@ export default function GongyongForm({ data }: { data: GongyongForm }) {
           </tr>
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// 포항 전용 양식 (설치/철수 확인서)
+function PohangForm({ data }: { data: GongyongForm }) {
+  const cheol = data.docType === "철수";
+  const docWord = cheol ? "철수" : "설치";
+  return (
+    <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
+      <div className="mb-1 text-right text-[11px] font-bold text-slate-500">포항</div>
+      <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{docWord} 확인서</div>
+      <div className="mb-2 text-[12px] font-bold">■ {docWord}확인일자 : {fmtDate(data.installDate)}</div>
+
+      <table className="mb-2 w-full border-collapse text-[11px]">
+        <tbody>
+          <tr>
+            <td className={`${lab} w-[12%]`}>지역 구분</td>
+            <td className={`${c} w-[38%]`}>{chk(true)} 포항</td>
+            <td className={`${lab} w-[14%]`} rowSpan={2}>※ 고객 요청 사항</td>
+            <td className={`${c} whitespace-pre-line align-top`} rowSpan={2}>{data.customerRequest}</td>
+          </tr>
+          <tr>
+            <td className={lab}>회사명</td>
+            <td className={c}>{data.companyName}</td>
+          </tr>
+          <tr>
+            <td className={lab}>영업소명</td>
+            <td className={c}>{data.officeName}</td>
+            <td className={lab} rowSpan={2}>※ 기타 사항</td>
+            <td className={`${c} whitespace-pre-line align-top`} rowSpan={2}>{data.etc}</td>
+          </tr>
+          <tr>
+            <td className={lab}>주 소</td>
+            <td className={c}>{data.address}</td>
+          </tr>
+          <tr>
+            <td className={lab}>전화번호</td>
+            <td className={c}>{data.phone}</td>
+            <td className={lab} rowSpan={2}>단말기구분</td>
+            <td className={cMid} rowSpan={2}>{chk(data.newTerminal)} 신단말기</td>
+          </tr>
+          <tr>
+            <td className={lab}>노선구분</td>
+            <td className={c}>{data.routeType}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="w-full border-collapse text-[9.5px] leading-tight">
+        <thead>
+          <tr>
+            <th className={`${hd} w-[5%]`}>NO</th>
+            <th className={`${hd} w-[15%]`}>차량번호</th>
+            <th className={`${hd} w-[18%]`}>{"운전자조작기\n(버스메인)"}</th>
+            <th className={`${hd} w-[16%]`}>{"승하차단말기1\n(승하차전용)"}</th>
+            <th className={`${hd} w-[16%]`}>{"승하차단말기2\n(승하차전용)"}</th>
+            <th className={`${hd} w-[15%]`}>인터페이스</th>
+            <th className={`${hd} w-[15%]`}>모뎀</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.vehicles.map((v, i) => (
+            <tr key={i}>
+              <td className={cMid}>{i + 1}</td>
+              <td className={cMid}>{v.vehicleNo}</td>
+              <td className={cMid}>{v.main}</td>
+              <td className={cMid}>{v.sc1}</td>
+              <td className={cMid}>{v.sc2}</td>
+              <td className={cMid}>{v.iface}</td>
+              <td className={cMid}>{v.modem}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-3 text-[10.5px] leading-relaxed">
+        <p>1. 상기물품을 정히 확인하고, 인수하였으며 해당 단말기를 이상없이 {docWord} 하였음을 확인합니다.</p>
+        {!cheol && <p>2. 상기물품을 보관함에 있어 분실시나 파손시 변상하겠음.</p>}
+      </div>
+
+      <table className="mt-4 w-full border-collapse text-[11px]">
+        <tbody>
+          <tr>
+            <td className="w-1/2 py-1 text-center align-bottom"><SignLine label="담당자 확인 :" name={data.installerName} sig={data.installerSig} /></td>
+            <td className="w-1/2 py-1 text-center align-bottom"><SignLine label="운수사 확인 :" name={data.operatorSignerName} sig={data.operatorSig} /></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="mt-3 text-[10px] font-semibold text-slate-500">TEL : (02)2063-3220　FAX : (02)2063-3810</div>
+
+      {/* 하단 로고 (티머니) — 오른쪽 아래 */}
+      <div className="mt-3 text-right">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/tmoney-logo.png" alt="티머니" className="inline-block h-9 w-auto" />
+      </div>
     </div>
   );
 }
