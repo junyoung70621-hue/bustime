@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
+import { REGION_CODE } from "@/lib/checklist-regional/templates";
 import { relayPdf, pdfFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,8 @@ export async function GET(req: NextRequest) {
   const from = sp.get("from");
   const to = sp.get("to");
   const trashed = sp.get("trashed") === "1";
+  // 수도권 = 'default', 대전·세종 = 'regional'
+  const variant = sp.get("variant") || "default";
 
   const sb = getSupabase();
   let query = sb
@@ -45,6 +48,7 @@ export async function GET(req: NextRequest) {
     .select(
       "id, center, operator, office_type, model, purpose, tagless, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at",
     )
+    .eq("variant", variant)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -89,7 +93,8 @@ export async function POST(req: NextRequest) {
   }
 
   const id = crypto.randomUUID();
-  const code = (CENTER_CODE as Record<string, string>)[String(meta.center)] ?? "etc";
+  const codeMap = { ...CENTER_CODE, ...REGION_CODE } as Record<string, string>;
+  const code = codeMap[String(meta.center)] ?? "etc";
   const path = `${code}/${id}.pdf`; // Storage 키는 ASCII만 허용
   const bytes = new Uint8Array(await pdf.arrayBuffer());
 
@@ -118,6 +123,7 @@ export async function POST(req: NextRequest) {
       transferor_name: meta.transferor_name ?? "",
       issued_date: meta.issued_date,
       pdf_path: path,
+      variant: meta.variant === "regional" ? "regional" : "default",
     })
     .select("id")
     .single();

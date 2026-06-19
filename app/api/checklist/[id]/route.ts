@@ -89,10 +89,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
   const tagless = Boolean(meta.tagless);
+  const regional = meta.variant === "regional";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
-      `설치완료 체크리스트${tagless ? "(태그리스)" : ""} (수정본)\n` +
+      `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""} (수정본)\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,

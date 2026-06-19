@@ -12,7 +12,7 @@ import type { FormState } from "@/lib/daepyecha/types";
 const td = "border border-slate-800 px-2 py-1 align-middle";
 const th = "border border-slate-800 px-1 py-1 bg-slate-100 font-bold text-center";
 
-export default function ConfirmationForm({ data }: { data: FormState }) {
+export default function ConfirmationForm({ data, centerSuffix = "센터" }: { data: FormState; centerSuffix?: string }) {
   const title = data.tagless
     ? "태그리스 설치 자재 지급확인서"
     : data.model
@@ -25,7 +25,7 @@ export default function ConfirmationForm({ data }: { data: FormState }) {
       style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif" }}
     >
       {data.center ? (
-        <div className="mb-1 text-right text-[12px] font-bold text-slate-500">{data.center}센터</div>
+        <div className="mb-1 text-right text-[12px] font-bold text-slate-500">{data.center}{centerSuffix}</div>
       ) : null}
 
       {/* 제목 바(원본: 남색 배경 흰 글씨) */}

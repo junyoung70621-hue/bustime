@@ -12,7 +12,8 @@ import { useEffect } from "react";
 
 const NAV = [
   { href: "/", label: "차량도착정보 조회", emoji: "🚌" },
-  { href: "/daepyecha", label: "대폐차", emoji: "📄" },
+  { href: "/daepyecha", label: "대폐차(수도권)", emoji: "📄" },
+  { href: "/daepyecha-region", label: "대폐차(지역)", emoji: "📍" },
 ];
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -53,7 +54,8 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         </div>
         <nav className="flex flex-col gap-1 p-3">
           {NAV.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            // 정확 일치 또는 하위 경로만 active (/daepyecha 가 /daepyecha-region 까지 잡지 않도록 트레일링 슬래시 기준)
+            const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}

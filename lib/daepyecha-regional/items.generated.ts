@@ -1,0 +1,98 @@
+// ─────────────────────────────────────────────────────────────
+// [자동 생성] 대전·세종 자재 지급확인서 모델×용도별 품목
+//   생성: python scripts/gen_jajae_regional.py
+//   원본: 자재지급확인서_양식_대전_세종 (1).xlsx
+// ─────────────────────────────────────────────────────────────
+import type { ItemTemplate } from "@/lib/daepyecha/types";
+
+export type RegJajaeModel = "B500" | "B650";
+export type RegJajaePurpose = "대폐차" | "증차";
+export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B500", "B650"];
+
+export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, ItemTemplate[]>> = {
+  B500: {
+    "대폐차": [
+      { name: "메인전원 케이블 (1.5M)", bigo: "차량메인전원 -> SMPS 전원공급용", hasNewReused: false },
+      { name: "운전자 전원 케이블 (1.5M)", bigo: "SMPS -> 운전자 전원공급용", hasNewReused: false },
+      { name: "승차 전원 케이블 (6M)", bigo: "운전자 -> 승차 전원공급용", hasNewReused: false },
+      { name: "승차 이더넷 케이블 (10M)", bigo: "공유기 -> 승차 통신용", hasNewReused: false },
+      { name: "하차 전원 케이블  (17M)", bigo: "승차 -> 하차1 전원공급용", hasNewReused: false },
+      { name: "하차 이더넷 케이블 (17M)", bigo: "공유기-> 하차1 통신용", hasNewReused: false },
+      { name: "공유기 케이블 (10M)", bigo: "운전자 -> 공유기 전원 및 통신용", hasNewReused: false },
+      { name: "CCTV 케이블 (4M)", bigo: "공유기 ->CCTV 통신용", hasNewReused: false },
+      { name: "BMS 케이블 (타코메타1.5M / 안내방송6.0M)", bigo: "운전자 -> 타코메타 / 안내방송", hasNewReused: false },
+      { name: "무선 공유기", bigo: "운전자 -> 승하차 통신용", hasNewReused: false },
+      { name: "SMPS", bigo: "차량메인전원 -> 운전자 전원공급용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
+      { name: "GPS 브라켓", bigo: "GPS 안테나 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+    "증차": [
+      { name: "운전자 단말기", bigo: "운전자 단말기", hasNewReused: false },
+      { name: "승하차 단말기", bigo: "승하차 단말기", hasNewReused: false },
+      { name: "메인전원 케이블 (1.5M)", bigo: "차량메인전원 -> SMPS 전원공급용", hasNewReused: false },
+      { name: "운전자 전원 케이블 (1.5M)", bigo: "SMPS -> 운전자 전원공급용", hasNewReused: false },
+      { name: "승차 전원 케이블 (6M)", bigo: "운전자 -> 승차 전원공급용", hasNewReused: false },
+      { name: "승차 이더넷 케이블 (10M)", bigo: "공유기 -> 승차 통신용", hasNewReused: false },
+      { name: "하차 전원 케이블  (17M)", bigo: "승차 -> 하차1 전원공급용", hasNewReused: false },
+      { name: "하차 이더넷 케이블 (17M)", bigo: "공유기-> 하차1 통신용", hasNewReused: false },
+      { name: "공유기 케이블 (10M)", bigo: "운전자 -> 공유기 전원 및 통신용", hasNewReused: false },
+      { name: "CCTV 케이블 (4M)", bigo: "공유기 ->CCTV 통신용", hasNewReused: false },
+      { name: "BMS 케이블 (타코메타1.5M / 안내방송6.0M)", bigo: "운전자 -> 타코메타 / 안내방송", hasNewReused: false },
+      { name: "무선 공유기", bigo: "운전자 -> 승하차 통신용", hasNewReused: false },
+      { name: "SMPS", bigo: "차량메인전원 -> 운전자 전원공급용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
+      { name: "GPS 브라켓", bigo: "GPS 안테나 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+  },
+  B650: {
+    "대폐차": [
+      { name: "운전자 전원 케이블 (6M)", bigo: "차량메인전원 -> 운전자 전원공급용", hasNewReused: false },
+      { name: "승차 통신 케이블 (6M)", bigo: "운전자 -> 승차 전원 및 통신용", hasNewReused: false },
+      { name: "하차1 통신 케이블  (16M)", bigo: "운전자 -> 하차1 전원 및 통신용", hasNewReused: false },
+      { name: "하차2 통신 케이블 (14M)", bigo: "운전자 -> 하차2 전원 및 통신용", hasNewReused: false },
+      { name: "AFC I/O 케이블\n(LTE모뎀1.5M / 바코드리더기 6.0M)", bigo: "운전자 -> LTE 모뎀 케이블, 바코드리더기 \n                전원 및 통신용", hasNewReused: false },
+      { name: "BMS I/O케이블\n(행선안내기6.0M/안내방송6.0M/잔여좌석표시기3.0M)", bigo: "운전자 -> 행선안내기. 안내방송. \n                잔여좌석표시기 전원 및 통신용", hasNewReused: false },
+      { name: "LTE 모뎀 케이블 (6M)", bigo: "AFC I/O -> LTE 모뎀 전원 및 통신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용", hasNewReused: false },
+      { name: "GPS 브라켓", bigo: "GPS 안테나 설치 및 고정용(신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승차ㄷ봉 (소켓 포함)", bigo: "승차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+    "증차": [
+      { name: "운전자 단말기", bigo: "운전자단말기", hasNewReused: false },
+      { name: "승하차 단말기", bigo: "승하차단말기", hasNewReused: false },
+      { name: "LTE 모뎀", bigo: "LTE모뎀", hasNewReused: false },
+      { name: "운전자 전원 케이블 (6M)", bigo: "차량메인전원 -> 운전자 전원공급용", hasNewReused: false },
+      { name: "승차 통신 케이블 (6M)", bigo: "운전자 -> 승차 전원 및 통신용", hasNewReused: false },
+      { name: "하차1 통신 케이블  (16M)", bigo: "운전자 -> 하차1 전원 및 통신용", hasNewReused: false },
+      { name: "하차2 통신 케이블 (14M)", bigo: "운전자 -> 하차2 전원 및 통신용", hasNewReused: false },
+      { name: "AFC I/O 케이블\n(LTE모뎀1.5M / 바코드리더기 6.0M)", bigo: "운전자 -> LTE 모뎀 케이블, 바코드리더기 \n                전원 및 통신용", hasNewReused: false },
+      { name: "BMS I/O케이블\n(행선안내기6.0M/안내방송6.0M/잔여좌석표시기3.0M)", bigo: "운전자 -> 행선안내기. 안내방송. \n                잔여좌석표시기 전원 및 통신용", hasNewReused: false },
+      { name: "LTE 모뎀 케이블 (6M)", bigo: "AFC I/O -> LTE 모뎀 전원 및 통신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용", hasNewReused: false },
+      { name: "GPS 브라켓", bigo: "GPS 안테나 설치 및 고정용(신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승차ㄷ봉 (소켓 포함)", bigo: "승차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+  },
+};

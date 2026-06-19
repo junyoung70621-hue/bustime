@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
+import { REGION_CODE } from "@/lib/checklist-regional/templates";
 import { sendRelayMail, checklistFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,8 @@ export async function GET(req: NextRequest) {
   const from = sp.get("from");
   const to = sp.get("to");
   const trashed = sp.get("trashed") === "1";
+  // 기본 체크리스트 = 'default', 지역 체크리스트 = 'regional'
+  const variant = sp.get("variant") || "default";
 
   const sb = getSupabase();
   let query = sb
@@ -41,6 +44,7 @@ export async function GET(req: NextRequest) {
     .select(
       "id, center, operator, model, install_date, vehicle_numbers, installer_name, operator_signer_name, pdf_path, created_at, updated_at, modified_by, deleted_at",
     )
+    .eq("variant", variant)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -81,7 +85,8 @@ export async function POST(req: NextRequest) {
   }
 
   const id = crypto.randomUUID();
-  const code = (CENTER_CODE as Record<string, string>)[String(meta.center)] ?? "etc";
+  const codeMap = { ...CENTER_CODE, ...REGION_CODE } as Record<string, string>;
+  const code = codeMap[String(meta.center)] ?? "etc";
   const path = `${code}/${id}.pdf`;
   const bytes = new Uint8Array(await pdf.arrayBuffer());
 
@@ -101,6 +106,7 @@ export async function POST(req: NextRequest) {
       operator_signer_name: meta.operator_signer_name ?? "",
       data: meta.data ?? {},
       pdf_path: path,
+      variant: meta.variant === "regional" ? "regional" : "default",
     })
     .select("id")
     .single();
@@ -115,10 +121,11 @@ export async function POST(req: NextRequest) {
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
   const tagless = Boolean(meta.tagless);
+  const regional = meta.variant === "regional";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
-      `설치완료 체크리스트${tagless ? "(태그리스)" : ""}\n` +
+      `설치완료 체크리스트${regional ? "(지역)" : tagless ? "(태그리스)" : ""}\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${id}`,

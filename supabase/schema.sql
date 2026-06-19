@@ -67,18 +67,22 @@ create table if not exists public.daepyecha_confirmations (
   transferor_name text not null default '',  -- 인계자(자사) 정자명
   issued_date     date not null,
   pdf_path        text not null,             -- Storage 내 경로
+  variant         text not null default 'default', -- 'default'(수도권) | 'regional'(대전·세종 등)
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(), -- 최종수정일(사이트에만 표기, PDF 미포함)
   modified_by     text not null default '',  -- 수정자명(수정 시 필수)
   deleted_at      timestamptz                -- 휴지통: null=정상, 값 있으면 휴지통
 );
--- 기존 테이블 마이그레이션: 태그리스 컬럼 추가(이미 있으면 무시)
+-- 기존 테이블 마이그레이션: 태그리스/variant 컬럼 추가(이미 있으면 무시)
 alter table public.daepyecha_confirmations
   add column if not exists tagless boolean not null default false;
+alter table public.daepyecha_confirmations
+  add column if not exists variant text not null default 'default';
 create index if not exists idx_dpc_center  on public.daepyecha_confirmations (center);
 create index if not exists idx_dpc_created on public.daepyecha_confirmations (created_at desc);
 create index if not exists idx_dpc_issued  on public.daepyecha_confirmations (issued_date desc);
 create index if not exists idx_dpc_deleted on public.daepyecha_confirmations (deleted_at);
+create index if not exists idx_dpc_variant on public.daepyecha_confirmations (variant);
 
 -- 기존 테이블이 이미 있는 경우(컬럼 추가 마이그레이션):
 alter table public.daepyecha_confirmations
@@ -108,15 +112,19 @@ create table if not exists public.checklist_confirmations (
   operator_signer_name text not null default '', -- 운수사 담당자 정자
   data                 jsonb not null default '{}'::jsonb, -- 폼 전체 스냅샷(서명 제외)
   pdf_path             text not null,
+  variant              text not null default 'default', -- 'default'(서울) | 'regional'(대전·세종)
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
   modified_by          text not null default '',
   deleted_at           timestamptz
 );
+-- 기존 테이블에 variant 컬럼 추가(이미 있으면 무시)
+alter table public.checklist_confirmations add column if not exists variant text not null default 'default';
 create index if not exists idx_ck_center  on public.checklist_confirmations (center);
 create index if not exists idx_ck_created on public.checklist_confirmations (created_at desc);
 create index if not exists idx_ck_install on public.checklist_confirmations (install_date desc);
 create index if not exists idx_ck_deleted on public.checklist_confirmations (deleted_at);
+create index if not exists idx_ck_variant on public.checklist_confirmations (variant);
 
 alter table public.checklist_confirmations enable row level security;
 drop policy if exists "read ck" on public.checklist_confirmations;
