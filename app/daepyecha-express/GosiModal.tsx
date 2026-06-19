@@ -200,6 +200,8 @@ function firstMissing(d: GosiForm): string | null {
   if (!d.installDate) return "설치일자를 입력하세요.";
   if (!d.operatorName.trim()) return "운수사명을 입력하세요.";
   if (!d.vehicleNo.trim()) return "차량번호를 입력하세요.";
+  const missingQty = d.items.filter((it) => it.name.trim() && !it.qty.trim()).length;
+  if (missingQty > 0) return `자재 수량 ${missingQty}건이 비어 있습니다. (수량 필수 입력)`;
   if (!d.operatorSig) return "고속사 확인 서명을 완료하세요.";
   return null;
 }
