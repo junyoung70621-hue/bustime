@@ -5,11 +5,47 @@
 // ─────────────────────────────────────────────────────────────
 import type { ItemTemplate } from "@/lib/daepyecha/types";
 
-export type RegJajaeModel = "B500" | "B650";
+export type RegJajaeModel = "B400" | "B500" | "B650";
 export type RegJajaePurpose = "대폐차" | "증차";
-export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B500", "B650"];
+export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B400", "B500", "B650"];
 
 export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, ItemTemplate[]>> = {
+  B400: {
+    "대폐차": [
+      { name: "메인 전원 케이블", bigo: "차량메인전원 -> SMPS 전원 공급용", hasNewReused: false },
+      { name: "승차 통신 케이블", bigo: "운전자 -> 승차 단말기 통신용", hasNewReused: false },
+      { name: "승하차 통신 케이블", bigo: "승차/하차 통신용", hasNewReused: false },
+      { name: "SMPS 전원케이블", bigo: "SMPS 전원 공급용", hasNewReused: false },
+      { name: "LAN ANT", bigo: "LAN 안테나 수신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용", hasNewReused: false },
+      { name: "안내방송전원케이블 (현대 )", bigo: "운전자 -> 차량 오디오 안내방송용", hasNewReused: false },
+      { name: "안내방송 데이터 케이블", bigo: "운전자 -> 차량 오디오 안내방송용", hasNewReused: false },
+      { name: "운전자봉 (카운티용)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+    "증차": [
+      { name: "메인 전원 케이블", bigo: "차량메인전원 -> SMPS 전원 공급용", hasNewReused: false },
+      { name: "승차 통신 케이블", bigo: "운전자 -> 승차 단말기 통신용", hasNewReused: false },
+      { name: "승하차 통신 케이블", bigo: "승차/하차 통신용", hasNewReused: false },
+      { name: "SMPS 전원케이블", bigo: "SMPS 전원 공급용", hasNewReused: false },
+      { name: "LAN ANT", bigo: "LAN 안테나 수신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용", hasNewReused: false },
+      { name: "안내방송전원케이블 (현대 )", bigo: "운전자 -> 차량 오디오 안내방송용", hasNewReused: false },
+      { name: "안내방송 데이터 케이블", bigo: "운전자 -> 차량 오디오 안내방송용", hasNewReused: false },
+      { name: "운전자봉 (카운티용)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+  },
   B500: {
     "대폐차": [
       { name: "메인전원 케이블 (1.5M)", bigo: "차량메인전원 -> SMPS 전원공급용", hasNewReused: false },

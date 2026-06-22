@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # ─────────────────────────────────────────────────────────────
 # 대전·세종 자재 지급확인서 엑셀 → lib/daepyecha-regional/items.generated.ts
-#   시트 4개: B500/B650 × (대폐차 / 증차). 각 시트 8행~"기타" 직전까지 품목.
-#   name=B열, bigo=D열("* " 제거), hasNewReused = bigo에 "(신규" 포함.
+#   시트 6개: B400/B500/B650 × (대폐차 / 증차). 각 시트 8행~"기타" 직전까지 품목.
+#   name=B열, bigo=D열("* " 제거), hasNewReused = bigo에 "(신규" 포함. 기본수량=대당 1.
 #   재생성: python scripts/gen_jajae_regional.py [xlsx경로]
 # ─────────────────────────────────────────────────────────────
 import sys, os, json
@@ -11,7 +11,11 @@ import openpyxl
 DEFAULT_XLSX = os.path.expanduser(r"~/Downloads/자재지급확인서_양식_대전_세종 (1).xlsx")
 XLSX = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_XLSX
 
-MODELS = ["B500", "B650"]
+MODELS = ["B400", "B500", "B650"]
+
+# 엑셀엔 있으나 실제 양식에서 제외하는 품목(이름 기준). 사용자 지시 반영.
+#   - "3S 앰프": B400 증차 시트에 있으나 제외(증차도 대폐차와 동일 15품목).
+EXCLUDE_NAMES = {"3S 앰프"}
 
 
 def norm(v):
@@ -35,6 +39,8 @@ def extract(ws):
         if name == "" or name == "기타":
             if name == "기타":
                 break
+            continue
+        if name in EXCLUDE_NAMES:
             continue
         bigo = norm(ws.cell(r, 4).value)  # D열
         if bigo.startswith("*"):
@@ -61,9 +67,9 @@ def main():
     out.append("// ─────────────────────────────────────────────────────────────")
     out.append('import type { ItemTemplate } from "@/lib/daepyecha/types";')
     out.append("")
-    out.append('export type RegJajaeModel = "B500" | "B650";')
+    out.append('export type RegJajaeModel = "B400" | "B500" | "B650";')
     out.append('export type RegJajaePurpose = "대폐차" | "증차";')
-    out.append('export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B500", "B650"];')
+    out.append('export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B400", "B500", "B650"];')
     out.append("")
     out.append("export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, ItemTemplate[]>> = {")
     for m in MODELS:
