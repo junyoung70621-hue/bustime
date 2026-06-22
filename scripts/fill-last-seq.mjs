@@ -4,6 +4,7 @@
 // "노선정보조회 - 노선별 정류소 목록(getStaionByRoute)" 1회 호출로
 //   · 최대 seq(종점 구간순번) · routeType(1공항/2마을/3간선/4지선/5순환/6광역/15심야)
 //   · 정류장 목록 [{seq, nm}] (마을버스 회차지 표시용)
+//   · last_st_id(종점 정류소 고유ID) — 도착정보 API(getArrInfoByRoute) 호출용
 //   을 함께 얻어 Supabase routes 테이블에 직접 UPDATE 한다.
 //
 // 사전조건: 공공 API 키 활성화(headerCd "0"). 미활성이면 즉시 중단.
@@ -70,20 +71,23 @@ async function infoOf(rid) {
   if (!items.length) return null;
   const seq = items.reduce((m, it) => Math.max(m, Number(it.seq ?? 0)), 0);
   const routeType = items[0]?.routeType ? String(items[0].routeType) : null;
+  // 종점(최대 seq) 정류소의 고유ID(station) — 도착정보 API(getArrInfoByRoute) stId 인자로 사용.
+  const lastItem = items.reduce((a, b) => (Number(b.seq ?? 0) >= Number(a?.seq ?? -1) ? b : a), null);
+  const lastStId = lastItem?.station ? String(lastItem.station) : null;
   // 정류장 목록(순번 오름차순) — 마을버스 회차지/현재정류장 표시용.
   const stations = items
     .map((it) => ({ seq: Number(it.seq ?? 0), nm: String(it.stationNm ?? "") }))
     .filter((s) => s.nm)
     .sort((a, b) => a.seq - b.seq);
-  return { seq, routeType, stations };
+  return { seq, routeType, lastStId, stations };
 }
 
 async function main() {
   await client.connect();
   const { rows } = await client.query(
-    "select route_id from public.routes where last_seq is null or route_type is null or stations is null order by route_id",
+    "select route_id from public.routes where last_seq is null or route_type is null or stations is null or last_st_id is null order by route_id",
   );
-  console.log(`대상 노선(last_seq/route_type/stations 중 미수집): ${rows.length}`);
+  console.log(`대상 노선(last_seq/route_type/stations/last_st_id 중 미수집): ${rows.length}`);
   if (!rows.length) {
     console.log("이미 모두 채워져 있습니다.");
     await client.end();
@@ -99,12 +103,12 @@ async function main() {
       const rid = ids[i++];
       try {
         const info = await infoOf(rid);
-        if (info && (info.seq > 0 || info.routeType || info.stations.length)) {
+        if (info && (info.seq > 0 || info.routeType || info.stations.length || info.lastStId)) {
           // 기존 값 보존: null 이 아닌 새 값이 있을 때만 덮어씀(coalesce)
           const stationsJson = info.stations.length ? JSON.stringify(info.stations) : null;
           await client.query(
-            "update public.routes set last_seq = coalesce($1, last_seq), route_type = coalesce($2, route_type), stations = coalesce($3::jsonb, stations) where route_id = $4",
-            [info.seq > 0 ? info.seq : null, info.routeType, stationsJson, rid],
+            "update public.routes set last_seq = coalesce($1, last_seq), route_type = coalesce($2, route_type), stations = coalesce($3::jsonb, stations), last_st_id = coalesce($4, last_st_id) where route_id = $5",
+            [info.seq > 0 ? info.seq : null, info.routeType, stationsJson, info.lastStId, rid],
           );
           ok++;
         }
@@ -125,7 +129,7 @@ async function main() {
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
   const left = await client.query(
-    "select count(*)::int n from public.routes where last_seq is null or route_type is null or stations is null",
+    "select count(*)::int n from public.routes where last_seq is null or route_type is null or stations is null or last_st_id is null",
   );
   console.log(`\n완료: ${ok}개 노선 갱신. 남은 미수집: ${left.rows[0].n}`);
   await client.end();

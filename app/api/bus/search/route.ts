@@ -9,9 +9,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, type VehicleRow, type RouteRow, type Station } from "@/lib/supabase";
 import {
   fetchBusPositions,
+  fetchArrivalInfo,
   PublicApiAuthError,
   PublicApiQuotaError,
   type BusPosition,
+  type ArrivalBus,
 } from "@/lib/publicApi";
 import { calcEta } from "@/lib/eta";
 import { classifyRoute } from "@/lib/routeType";
@@ -29,6 +31,9 @@ export type SearchResult = {
   etaMinutes: number;
   arrived: boolean;
   etaUnknown: boolean; // 종점순번 미수집으로 ETA 계산 불가
+  // ETA 산출 출처. "live"=종점 도착정보 API 실측 예측(교통상황 반영), "estimate"=정류장 수×평균 추정.
+  etaSource: "live" | "estimate";
+  arrMsg: string | null; // 도착정보 API 원문 메시지(live일 때만, 예: "3분23초후[2번째 전]")
   atStop: boolean; // 현재 정류소 정차 중 여부
   dataTm: string;
   live: boolean; // 실시간 위치 매칭 성공 여부
@@ -72,6 +77,20 @@ function matchPosition(positions: BusPosition[], v: VehicleRow, q: string): BusP
   );
 }
 
+// 종점 도착정보 목록에서 해당 차량(vehId 우선, 없으면 번호판 끝자리)의 실측 예측 도착(분)을 찾는다.
+// 종점에서 먼 차량은 도착정보 목록(접근 1·2번째)에 없어 null → 호출부가 추정식으로 폴백.
+function liveEtaMinutes(
+  arrivals: ArrivalBus[],
+  vehId: string | undefined,
+  tail: string,
+): { minutes: number; arrmsg: string } | null {
+  const a =
+    (vehId ? arrivals.find((x) => x.vehId === vehId) : undefined) ??
+    (tail ? arrivals.find((x) => x.plainNo.endsWith(tail)) : undefined);
+  if (!a || a.traTimeSec < 0) return null;
+  return { minutes: Math.max(0, Math.round(a.traTimeSec / 60)), arrmsg: a.arrmsg };
+}
+
 // ISO 시각 → 한국시간(KST) "HH:MM".
 function fmtKstHm(iso: string): string {
   const k = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
@@ -109,36 +128,57 @@ export async function GET(req: NextRequest) {
   // 2) 노선ID 중복 제거 (미배정 차량은 제외)
   const routeIds = [...new Set(vehicles.map((v) => v.route_id).filter((r): r is string => !!r))];
 
-  // 2-1) 해당 노선들의 종점순번(last_seq) + 노선유형(route_type) + 정류장목록(stations) 조회 → Map
+  // 2-1) 해당 노선들의 종점순번(last_seq) + 종점정류소ID(last_st_id) + 노선유형 + 정류장목록 조회 → Map
   const lastSeqByRoute = new Map<string, number | null>();
+  const lastStIdByRoute = new Map<string, string | null>();
   const routeTypeByRoute = new Map<string, string | null>();
   const stationsByRoute = new Map<string, Station[] | null>();
   if (routeIds.length > 0) {
     const { data: routeRows } = await supabase
       .from("routes")
-      .select("route_id, last_seq, route_type, stations")
+      .select("route_id, last_seq, last_st_id, route_type, stations")
       .in("route_id", routeIds)
       .returns<RouteRow[]>();
     for (const r of routeRows ?? []) {
       lastSeqByRoute.set(r.route_id, r.last_seq);
+      lastStIdByRoute.set(r.route_id, r.last_st_id);
       routeTypeByRoute.set(r.route_id, r.route_type);
       stationsByRoute.set(r.route_id, r.stations);
     }
   }
   const positionsByRoute = new Map<string, BusPosition[]>();
+  // 노선별 종점 도착예정정보(실측 ETA). 종점정류소ID·순번이 있는 노선만 채워진다.
+  const arrivalsByRoute = new Map<string, ArrivalBus[]>();
   let authError: PublicApiAuthError | null = null;
   let quotaError: PublicApiQuotaError | null = null;
 
   await Promise.all(
     routeIds.map(async (rid) => {
-      try {
-        positionsByRoute.set(rid, await fetchBusPositions(rid));
-      } catch (e) {
-        if (e instanceof PublicApiQuotaError) quotaError = e;
-        else if (e instanceof PublicApiAuthError) authError = e;
-        else console.error(`route ${rid} 위치 조회 실패`, e);
-        positionsByRoute.set(rid, []);
-      }
+      // (a) 실시간 위치 — 현재 구간순번/앞차/마을버스 표시에 필수.
+      const posTask = (async () => {
+        try {
+          positionsByRoute.set(rid, await fetchBusPositions(rid));
+        } catch (e) {
+          if (e instanceof PublicApiQuotaError) quotaError = e;
+          else if (e instanceof PublicApiAuthError) authError = e;
+          else console.error(`route ${rid} 위치 조회 실패`, e);
+          positionsByRoute.set(rid, []);
+        }
+      })();
+      // (b) 종점 도착예정정보 — 실측 ETA용. 실패해도 추정식으로 폴백하므로 조용히 무시.
+      const lastStId = lastStIdByRoute.get(rid);
+      const lastSeq = lastSeqByRoute.get(rid);
+      const arrTask = (async () => {
+        if (!lastStId || !lastSeq) return;
+        try {
+          arrivalsByRoute.set(rid, await fetchArrivalInfo(rid, lastStId, lastSeq));
+        } catch (e) {
+          if (e instanceof PublicApiQuotaError) quotaError = e;
+          else if (e instanceof PublicApiAuthError) authError = e;
+          arrivalsByRoute.set(rid, []);
+        }
+      })();
+      await Promise.all([posTask, arrTask]);
     }),
   );
 
@@ -205,6 +245,22 @@ export async function GET(req: NextRequest) {
     const lastSeq = v.route_id ? lastSeqByRoute.get(v.route_id) ?? null : null;
     const currentSeq = pos?.sectOrd ?? 0;
     const eta = calcEta(currentSeq, lastSeq);
+    const arrivals = v.route_id ? arrivalsByRoute.get(v.route_id) ?? [] : [];
+
+    // ETA: 종점 도착정보 API에 내 차량이 잡히면 실측 예측(분)을 우선 사용, 아니면 추정식.
+    let etaMinutes = eta.etaMinutes;
+    let arrived = eta.arrived;
+    let etaSource: "live" | "estimate" = "estimate";
+    let arrMsg: string | null = null;
+    if (pos) {
+      const live = liveEtaMinutes(arrivals, pos.vehId, q);
+      if (live) {
+        etaMinutes = live.minutes;
+        etaSource = "live";
+        arrMsg = live.arrmsg;
+        arrived = false; // 도착정보 목록에 잡힘 = 아직 종점 접근 중
+      }
+    }
 
     const routeType = v.route_id ? routeTypeByRoute.get(v.route_id) ?? null : null;
     const typeInfo = classifyRoute(routeType, v.route_name);
@@ -238,8 +294,13 @@ export async function GET(req: NextRequest) {
         frontTail = (front.plainNo ?? "").slice(-4);
         frontGap = front.sectOrd - pos.sectOrd;
         frontLive = true;
-        const fe = calcEta(front.sectOrd, lastSeq);
-        if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
+        // 앞차도 종점 도착정보에 잡히면 실측 예측 우선, 아니면 추정식.
+        const fLive = liveEtaMinutes(arrivals, front.vehId, frontTail);
+        if (fLive) frontEtaMinutes = fLive.minutes;
+        else {
+          const fe = calcEta(front.sectOrd, lastSeq);
+          if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
+        }
       }
     } else if (v.vehicle_id) {
       const h = histByVehicle.get(v.vehicle_id);
@@ -250,8 +311,12 @@ export async function GET(req: NextRequest) {
         // 신호없는 내 차: 아침에 기록된 앞차(끝4자리)를 현재 실시간 위치에서 찾아 ETA 계산.
         const frontPos = positions.find((p) => (p.plainNo ?? "").endsWith(h.front_tail));
         if (frontPos) {
-          const fe = calcEta(frontPos.sectOrd, lastSeq);
-          if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
+          const fLive = liveEtaMinutes(arrivals, frontPos.vehId, h.front_tail);
+          if (fLive) frontEtaMinutes = fLive.minutes;
+          else {
+            const fe = calcEta(frontPos.sectOrd, lastSeq);
+            if (!fe.unknown) frontEtaMinutes = fe.etaMinutes;
+          }
         }
       }
     }
@@ -264,9 +329,11 @@ export async function GET(req: NextRequest) {
       currentSeq,
       lastSeq,
       remainingStops: eta.remainingStops,
-      etaMinutes: eta.etaMinutes,
-      arrived: eta.arrived,
+      etaMinutes,
+      arrived,
       etaUnknown: eta.unknown,
+      etaSource,
+      arrMsg,
       atStop: pos?.stopFlag === "1",
       dataTm: pos?.dataTm ?? "",
       live: Boolean(pos),

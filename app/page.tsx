@@ -306,6 +306,9 @@ function EtaCard({ r }: { r: SearchResult }) {
           value={etaLabel}
           sub={etaRemain}
           highlight
+          badge={
+            r.etaUnknown ? undefined : <EtaSourceBadge source={r.etaSource} />
+          }
           extra={
             r.frontTail ? (
               <FrontCar tail={r.frontTail} gap={r.frontGap} live={r.frontLive} at={r.frontAt} />
@@ -478,22 +481,49 @@ function arrivalClock(minutes: number): string {
   return `${hh}시 ${mm}분`;
 }
 
+// ETA 출처 뱃지: 실측 도착정보 예측(live) vs 정류장 수×평균 추정(estimate).
+function EtaSourceBadge({ source }: { source: SearchResult["etaSource"] }) {
+  if (source === "live") {
+    return (
+      <span
+        className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 ring-1 ring-emerald-200"
+        title="종점 도착정보 API의 실측 예측(교통상황 반영) — 서울버스정보 수준"
+      >
+        실시간 예측
+      </span>
+    );
+  }
+  return (
+    <span
+      className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200"
+      title="정류장 수 × 평균 소요시간 추정 — 종점에서 멀어 실측 도착정보에 잡히지 않는 경우"
+    >
+      추정
+    </span>
+  );
+}
+
 function Stat({
   label,
   value,
   sub,
   highlight,
+  badge,
   extra,
 }: {
   label: string;
   value: string;
   sub?: string;
   highlight?: boolean;
+  badge?: React.ReactNode;
   extra?: React.ReactNode;
 }) {
   return (
     <div className="bg-white px-5 py-5">
-      <p className="text-xs font-medium text-slate-400">{label}</p>
+      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+        {label}
+        {badge}
+      </p>
       <p
         className={`mt-1 font-extrabold ${
           highlight ? "text-[23px] text-brand-600" : "text-2xl text-slate-800"
