@@ -92,8 +92,9 @@ export async function sendRelayMail(opts: {
 }
 
 /** 증빙사진 다중 첨부 릴레이(수도권 전용). 실패해도 throw하지 않음.
- *  제목 "대폐차사진|수도권|{센터}|{운수사}|{차량번호}|{날짜}" → 플로우가 prefix로 분기,
- *  split('|')로 센터[2]/운수사[3]/차량번호[4] 추출해 사진/수도권/센터/운수사/차량번호 폴더에 저장.
+ *  제목 "증빙사진|수도권|{센터}|{운수사}|{차량번호}|{날짜}" — 자재/체크리스트(대폐차|…)와
+ *  prefix가 겹치지 않아 기존 센터폴더 흐름(제목필터 '대폐차')이 이 메일을 잡지 않는다.
+ *  플로우: split('|')로 센터[2]/운수사[3]/차량번호[4] 추출해 사진/수도권/센터/운수사/차량번호 폴더에 저장.
  *  파일명(label.jpg)이 곧 Teams 저장 파일명. SMTP 미설정·사진 0장이면 즉시 비활성. */
 export async function sendPhotoRelayMail(opts: {
   center: string;
@@ -106,7 +107,7 @@ export async function sendPhotoRelayMail(opts: {
   const to = process.env.RELAY_MAIL_TO;
   if (!host || !to || opts.photos.length === 0) return; // 미설정/사진없음 → 비활성
 
-  const subject = `대폐차사진|수도권|${safeName(opts.center)}|${safeName(opts.operator)}|${safeName(opts.vehicleNo)}|${opts.installDate}`;
+  const subject = `증빙사진|수도권|${safeName(opts.center)}|${safeName(opts.operator)}|${safeName(opts.vehicleNo)}|${opts.installDate}`;
   const text =
     `대폐차 증빙사진 (수도권)\n` +
     `센터: ${opts.center}\n운수사: ${opts.operator}\n차량번호: ${opts.vehicleNo}\n` +
