@@ -48,7 +48,7 @@ export default function Step2Sign({
             className="h-11 w-full rounded-lg border border-amber-300 px-3 text-base outline-none focus:border-amber-500"
           />
           <p className="mt-1.5 text-xs text-amber-700">
-            * 수정 시 서명은 다시 입력해야 합니다. 최종수정일은 목록에만 표시됩니다.
+            * 기존 서명은 자동 유지됩니다(변경할 때만 다시 서명). 최종수정일은 목록에만 표시됩니다.
           </p>
         </div>
       )}

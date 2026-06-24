@@ -121,6 +121,8 @@ export async function POST(req: NextRequest) {
       etc: meta.etc ?? "",
       receiver_name: meta.receiver_name ?? "",
       transferor_name: meta.transferor_name ?? "",
+      receiver_sig: meta.receiver_sig ?? null,
+      transferor_sig: meta.transferor_sig ?? null,
       issued_date: meta.issued_date,
       pdf_path: path,
       variant: meta.variant === "regional" ? "regional" : "default",

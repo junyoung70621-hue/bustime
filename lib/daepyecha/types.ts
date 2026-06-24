@@ -60,6 +60,8 @@ export type ConfirmationRow = {
   etc: string; // 기타사항
   receiver_name: string;
   transferor_name: string;
+  receiver_sig: string | null; // 인수자 서명 dataURL(PNG). 수정 시 유지(없으면 재서명)
+  transferor_sig: string | null; // 인계자 서명 dataURL(PNG). 수정 시 유지(없으면 재서명)
   issued_date: string;
   pdf_path: string;
   created_at: string;

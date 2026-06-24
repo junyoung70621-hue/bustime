@@ -68,6 +68,8 @@ create table if not exists public.daepyecha_confirmations (
   etc             text not null default '',  -- 기타사항(표 13번 행)
   receiver_name   text not null default '',  -- 인수자(운수회사) 정자명
   transferor_name text not null default '',  -- 인계자(자사) 정자명
+  receiver_sig    text,                      -- 인수자 서명 dataURL(PNG). 수정 시 재서명 없이 유지
+  transferor_sig  text,                      -- 인계자 서명 dataURL(PNG). 수정 시 재서명 없이 유지
   issued_date     date not null,
   pdf_path        text not null,             -- Storage 내 경로
   variant         text not null default 'default', -- 'default'(수도권) | 'regional'(대전·세종 등)
@@ -81,6 +83,11 @@ alter table public.daepyecha_confirmations
   add column if not exists tagless boolean not null default false;
 alter table public.daepyecha_confirmations
   add column if not exists variant text not null default 'default';
+-- 서명 보관 컬럼(수정 시 재서명 없이 기존 서명 유지). 기존 행은 null → 수정 시 재서명 필요.
+alter table public.daepyecha_confirmations
+  add column if not exists receiver_sig   text;
+alter table public.daepyecha_confirmations
+  add column if not exists transferor_sig text;
 create index if not exists idx_dpc_center  on public.daepyecha_confirmations (center);
 create index if not exists idx_dpc_created on public.daepyecha_confirmations (created_at desc);
 create index if not exists idx_dpc_issued  on public.daepyecha_confirmations (issued_date desc);

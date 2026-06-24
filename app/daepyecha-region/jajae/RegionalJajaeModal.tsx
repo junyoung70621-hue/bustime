@@ -91,9 +91,9 @@ export default function RegionalJajaeModal({
           issuedDate: r.issued_date,
           items: r.items ?? [],
           receiverName: r.receiver_name,
-          receiverSig: null,
+          receiverSig: r.receiver_sig ?? null, // 기존 서명 유지(없으면 재서명)
           transferorName: r.transferor_name,
-          transferorSig: null,
+          transferorSig: r.transferor_sig ?? null,
         });
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "불러오기 실패");
@@ -165,6 +165,8 @@ export default function RegionalJajaeModal({
         etc: data.etc,
         receiver_name: data.receiverName,
         transferor_name: data.transferorName,
+        receiver_sig: data.receiverSig,
+        transferor_sig: data.transferorSig,
         issued_date: data.issuedDate,
         variant: "regional",
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
@@ -284,7 +286,7 @@ export default function RegionalJajaeModal({
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <label className="mb-1 block text-sm font-bold text-amber-800">수정자명 (필수)</label>
                   <input value={modifiedBy} onChange={(e) => setModifiedBy(e.target.value)} placeholder="수정하는 사람 이름" className="h-11 w-full rounded-lg border border-amber-300 px-3 text-base outline-none focus:border-amber-500" />
-                  <p className="mt-1.5 text-xs text-amber-700">* 수정 시 서명은 다시 입력해야 합니다.</p>
+                  <p className="mt-1.5 text-xs text-amber-700">* 기존 서명은 자동 유지됩니다. 변경할 때만 다시 서명하세요.</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2">

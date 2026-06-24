@@ -4,7 +4,7 @@
 // 작성/수정 모달 (전체 폼 상태 소유 + 단계 전환 + PDF 생성/업로드)
 //   step1(기본정보) → step2(서명/미리보기) → 저장(PDF→Storage+DB)
 //   editId 가 있으면 수정 모드: 기존 기록 로딩 + 수정자명 필수 + PUT 저장.
-//   ※ 서명은 DB에 저장되지 않으므로 수정 시 다시 서명해야 함.
+//   ※ 서명은 DB에 보관되어 수정 시 그대로 유지됨(변경 시에만 재서명).
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { itemsForModel, itemsForTagless } from "@/lib/daepyecha/templates";
@@ -84,9 +84,9 @@ export default function DaepyechaModal({
           issuedDate: r.issued_date,
           items: r.items ?? [],
           receiverName: r.receiver_name,
-          receiverSig: null, // 서명은 미저장 → 재서명 필요
+          receiverSig: r.receiver_sig ?? null, // 기존 서명 유지(없으면 재서명)
           transferorName: r.transferor_name,
-          transferorSig: null,
+          transferorSig: r.transferor_sig ?? null,
         });
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "불러오기 실패");
@@ -174,6 +174,8 @@ export default function DaepyechaModal({
         etc: data.etc,
         receiver_name: data.receiverName,
         transferor_name: data.transferorName,
+        receiver_sig: data.receiverSig,
+        transferor_sig: data.transferorSig,
         issued_date: data.issuedDate,
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };

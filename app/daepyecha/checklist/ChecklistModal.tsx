@@ -63,7 +63,7 @@ export default function ChecklistModal({
         if (!res.ok) throw new Error(json.error ?? "불러오기 실패");
         const r = json.row as CkRow;
         if (!alive) return;
-        setData({ ...emptyCkForm(todayStr()), ...r.data, installerSig: null, operatorSig: null });
+        setData({ ...emptyCkForm(todayStr()), ...r.data }); // 기존 서명 유지
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "불러오기 실패");
       } finally {
@@ -97,7 +97,6 @@ export default function ChecklistModal({
     setSaving(true);
     try {
       const blob = await generatePdfBlob(captureRef.current);
-      const dataForDb: CkFormState = { ...data, installerSig: null, operatorSig: null };
       const meta = {
         center: data.center,
         operator: data.tagless ? `(태그리스)${data.operatorName}` : data.operatorName,
@@ -106,7 +105,7 @@ export default function ChecklistModal({
         vehicle_numbers: data.vehicleNo,
         installer_name: data.installerName,
         operator_signer_name: data.operatorSignerName,
-        data: dataForDb,
+        data, // 서명 포함 저장(수정 시 유지)
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };
       const fd = new FormData();
@@ -154,7 +153,7 @@ export default function ChecklistModal({
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <label className="mb-1 block text-sm font-bold text-amber-800">수정자명 (필수)</label>
                   <input value={modifiedBy} onChange={(e) => setModifiedBy(e.target.value)} placeholder="수정하는 사람 이름" className={inp} />
-                  <p className="mt-1 text-xs text-amber-700">* 수정 시 서명은 다시 입력해야 합니다.</p>
+                  <p className="mt-1 text-xs text-amber-700">* 기존 서명은 자동 유지됩니다. 변경할 때만 다시 서명하세요.</p>
                 </div>
               )}
 

@@ -100,6 +100,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       etc: meta.etc ?? "",
       receiver_name: meta.receiver_name ?? "",
       transferor_name: meta.transferor_name ?? "",
+      receiver_sig: meta.receiver_sig ?? null,
+      transferor_sig: meta.transferor_sig ?? null,
       issued_date: meta.issued_date,
       modified_by: String(meta.modified_by).trim(),
       updated_at: new Date().toISOString(),
