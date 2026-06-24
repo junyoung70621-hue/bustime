@@ -88,6 +88,9 @@ alter table public.daepyecha_confirmations
   add column if not exists receiver_sig   text;
 alter table public.daepyecha_confirmations
   add column if not exists transferor_sig text;
+-- 팀즈 업로드 파일명 보관 → 수정 시 이전 파일 삭제용(플로우에 이전 파일명 전달)
+alter table public.daepyecha_confirmations
+  add column if not exists teams_file text;
 create index if not exists idx_dpc_center  on public.daepyecha_confirmations (center);
 create index if not exists idx_dpc_created on public.daepyecha_confirmations (created_at desc);
 create index if not exists idx_dpc_issued  on public.daepyecha_confirmations (issued_date desc);
@@ -130,6 +133,8 @@ create table if not exists public.checklist_confirmations (
 );
 -- 기존 테이블에 variant 컬럼 추가(이미 있으면 무시)
 alter table public.checklist_confirmations add column if not exists variant text not null default 'default';
+-- 팀즈 업로드 파일명 보관 → 수정 시 이전 파일 삭제용
+alter table public.checklist_confirmations add column if not exists teams_file text;
 create index if not exists idx_ck_center  on public.checklist_confirmations (center);
 create index if not exists idx_ck_created on public.checklist_confirmations (created_at desc);
 create index if not exists idx_ck_install on public.checklist_confirmations (install_date desc);

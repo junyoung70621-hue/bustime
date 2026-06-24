@@ -44,10 +44,17 @@ export async function sendRelayMail(opts: {
   fileName: string;
   pdf: Uint8Array; // 첨부 바이트(PDF 또는 JPG)
   contentType?: string; // 기본 application/pdf, 팀즈 JPG 업로드 시 image/jpeg
+  action?: "created" | "updated"; // 신규/수정 — 제목 끝에 표기
+  replaceFile?: string; // 수정 시 삭제할 이전 파일명(플로우가 그 파일 삭제 후 재업로드)
 }): Promise<void> {
   const host = process.env.SMTP_HOST;
   const to = process.env.RELAY_MAIL_TO;
   if (!host || !to) return; // 미설정 → 비활성
+
+  // 제목 끝에 "|{신규|수정}|{이전파일명}" 추가(기존 split('|')[1]=센터 파싱과 호환).
+  //   플로우: [4]="수정" 이고 [5]가 있으면 그 파일을 삭제한 뒤 첨부 저장.
+  const op = opts.action === "updated" ? "수정" : "신규";
+  const subject = `${opts.subject}|${op}|${opts.replaceFile ?? ""}`;
 
   try {
     const transporter = nodemailer.createTransport({
@@ -62,7 +69,7 @@ export async function sendRelayMail(opts: {
     await transporter.sendMail({
       from: process.env.RELAY_MAIL_FROM || process.env.SMTP_USER,
       to,
-      subject: opts.subject,
+      subject,
       text: opts.text,
       attachments: [
         {
@@ -91,6 +98,7 @@ export type RelayPayload = {
   vehicleNumbers: string;
   vehicleCount: number;
   action: "created" | "updated";
+  replaceFile?: string; // 수정 시 삭제할 이전 파일명
 };
 
 /** PDF를 메일 첨부로 발송(Teams 릴레이). 실패해도 throw하지 않음(저장 비차단). */
@@ -102,5 +110,13 @@ export async function relayPdf(p: RelayPayload): Promise<void> {
     `센터: ${p.center}\n운수사: ${p.operator} ${p.officeType}\n모델: ${p.model}\n` +
     `용도: ${p.purpose}\n지급일: ${p.issuedDate}\n` +
     `차량: ${p.vehicleCount}대 ${p.vehicleNumbers}\nID: ${p.recordId}`;
-  await sendRelayMail({ subject, text, fileName: p.fileName, pdf: p.pdf, contentType: p.contentType });
+  await sendRelayMail({
+    subject,
+    text,
+    fileName: p.fileName,
+    pdf: p.pdf,
+    contentType: p.contentType,
+    action: p.action,
+    replaceFile: p.replaceFile,
+  });
 }

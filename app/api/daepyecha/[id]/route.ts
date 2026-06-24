@@ -68,10 +68,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "수정자명을 입력하세요." }, { status: 400 });
   }
 
-  // 기존 pdf_path 확인
+  // 기존 pdf_path + 이전 팀즈 파일명 확인
   const { data: cur, error: curErr } = await sb!
     .from("daepyecha_confirmations")
-    .select("pdf_path")
+    .select("pdf_path, teams_file")
     .eq("id", params.id)
     .single();
   if (curErr || !cur) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -84,6 +84,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (up.error) {
     return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
   }
+
+  // 새 팀즈 파일명(수도권은 jpg) — 갱신 후 DB에 보관.
+  const jpgFile = form.get("jpg");
+  const hasJpg = jpgFile instanceof File;
+  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
+  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), Number(meta.vehicle_count ?? 0));
+  const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
   const { error } = await sb!
     .from("daepyecha_confirmations")
@@ -103,6 +110,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       receiver_sig: meta.receiver_sig ?? null,
       transferor_sig: meta.transferor_sig ?? null,
       issued_date: meta.issued_date,
+      teams_file: relayName,
       modified_by: String(meta.modified_by).trim(),
       updated_at: new Date().toISOString(),
     })
@@ -111,15 +119,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
 
   // Teams 자동 업로드(수정본, 이메일 릴레이). 실패해도 저장은 성공 처리.
-  // 수도권 모달은 jpg도 함께 전송 → 팀즈에는 JPG로 업로드(보관본은 PDF 유지).
-  const jpgFile = form.get("jpg");
-  const hasJpg = jpgFile instanceof File;
-  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
-  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), Number(meta.vehicle_count ?? 0));
+  // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
   await relayPdf({
-    fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
+    fileName: relayName,
     pdf: relayBytes,
     contentType: hasJpg ? "image/jpeg" : "application/pdf",
+    replaceFile: cur.teams_file ?? undefined,
     recordId: params.id,
     center: String(meta.center ?? ""),
     operator: String(meta.operator ?? ""),

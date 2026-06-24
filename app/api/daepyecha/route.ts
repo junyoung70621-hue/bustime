@@ -105,6 +105,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
   }
 
+  // 팀즈 업로드 파일명(수도권은 jpg) — DB에 보관해 수정 시 이전 파일 삭제에 사용.
+  const jpgFile = form.get("jpg");
+  const hasJpg = jpgFile instanceof File;
+  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
+  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), Number(meta.vehicle_count ?? 0));
+  const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
+
   const { data, error } = await sb!
     .from("daepyecha_confirmations")
     .insert({
@@ -125,6 +132,7 @@ export async function POST(req: NextRequest) {
       transferor_sig: meta.transferor_sig ?? null,
       issued_date: meta.issued_date,
       pdf_path: path,
+      teams_file: relayName,
       variant: meta.variant === "regional" ? "regional" : "default",
     })
     .select("id")
@@ -136,13 +144,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Teams 자동 업로드(이메일 릴레이). 실패해도 저장은 성공 처리.
-  // 수도권 모달은 jpg도 함께 전송 → 팀즈에는 JPG로 업로드(보관본은 PDF 유지).
-  const jpgFile = form.get("jpg");
-  const hasJpg = jpgFile instanceof File;
-  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
-  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), Number(meta.vehicle_count ?? 0));
   await relayPdf({
-    fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
+    fileName: relayName,
     pdf: relayBytes,
     contentType: hasJpg ? "image/jpeg" : "application/pdf",
     recordId: id,

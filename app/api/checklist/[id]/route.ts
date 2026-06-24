@@ -58,7 +58,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const { data: cur, error: curErr } = await sb!
     .from("checklist_confirmations")
-    .select("pdf_path")
+    .select("pdf_path, teams_file")
     .eq("id", params.id)
     .single();
   if (curErr || !cur) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -67,24 +67,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const up = await sb!.storage.from(BUCKET).upload(cur.pdf_path, bytes, { contentType: "application/pdf", upsert: true });
   if (up.error) return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
 
-  const { error } = await sb!
-    .from("checklist_confirmations")
-    .update({
-      center: meta.center,
-      operator: meta.operator,
-      model: meta.model,
-      install_date: meta.install_date || null,
-      vehicle_numbers: meta.vehicle_numbers ?? "",
-      installer_name: meta.installer_name ?? "",
-      operator_signer_name: meta.operator_signer_name ?? "",
-      data: meta.data ?? {},
-      modified_by: String(meta.modified_by).trim(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", params.id);
-  if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
-
-  // Teams 자동 업로드(이메일 릴레이) — 수정본.
+  // 팀즈 업로드 메타/파일명 — 갱신 후 DB에 보관.
   const center = String(meta.center ?? "");
   const operator = String(meta.operator ?? "");
   const installDate = String(meta.install_date ?? "");
@@ -101,6 +84,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   // 설치확인서는 차량 여러 대일 수 있어 대수로 표기, 체크리스트(단일)는 차량번호 유지
   const vehCount = vehNo.split(",").map((s) => s.trim()).filter(Boolean).length;
   const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehCount) : checklistFileName(operator, installDate, tagless, vehNo);
+  const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
+
+  const { error } = await sb!
+    .from("checklist_confirmations")
+    .update({
+      center: meta.center,
+      operator: meta.operator,
+      model: meta.model,
+      install_date: meta.install_date || null,
+      vehicle_numbers: meta.vehicle_numbers ?? "",
+      installer_name: meta.installer_name ?? "",
+      operator_signer_name: meta.operator_signer_name ?? "",
+      data: meta.data ?? {},
+      teams_file: relayName,
+      modified_by: String(meta.modified_by).trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.id);
+  if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+
+  // Teams 자동 업로드(이메일 릴레이) — 수정본.
+  // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
@@ -108,9 +113,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
-    fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
+    fileName: relayName,
     pdf: relayBytes,
     contentType: hasJpg ? "image/jpeg" : "application/pdf",
+    action: "updated",
+    replaceFile: cur.teams_file ?? undefined,
   });
 
   return NextResponse.json({ id: params.id });
