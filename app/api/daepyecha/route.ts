@@ -136,9 +136,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Teams 자동 업로드(이메일 릴레이). 실패해도 저장은 성공 처리.
+  // 수도권 모달은 jpg도 함께 전송 → 팀즈에는 JPG로 업로드(보관본은 PDF 유지).
+  const jpgFile = form.get("jpg");
+  const hasJpg = jpgFile instanceof File;
+  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
+  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless));
   await relayPdf({
-    fileName: pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless)),
-    pdf: bytes,
+    fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
+    pdf: relayBytes,
+    contentType: hasJpg ? "image/jpeg" : "application/pdf",
     recordId: id,
     center: String(meta.center ?? ""),
     operator: String(meta.operator ?? ""),

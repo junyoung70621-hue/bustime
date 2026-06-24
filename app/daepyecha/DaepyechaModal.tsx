@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { itemsForModel, itemsForTagless } from "@/lib/daepyecha/templates";
-import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import type { ConfirmationRow, FormState, Model, NewReused } from "@/lib/daepyecha/types";
 import Step1Input from "./Step1Input";
 import Step2Sign from "./Step2Sign";
@@ -160,7 +160,7 @@ export default function DaepyechaModal({
     setError(null);
     setSaving(true);
     try {
-      const blob = await generatePdfBlob(captureRef.current);
+      const { pdf, jpg } = await generatePdfAndJpg(captureRef.current);
       const meta = {
         center: data.center,
         operator: data.operator,
@@ -180,7 +180,8 @@ export default function DaepyechaModal({
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };
       const fd = new FormData();
-      fd.append("pdf", blob, "confirmation.pdf");
+      fd.append("pdf", pdf, "confirmation.pdf");
+      fd.append("jpg", jpg, "confirmation.jpg"); // 팀즈 업로드용(수도권)
       fd.append("meta", JSON.stringify(meta));
       const res = await fetch(isEdit ? `/api/daepyecha/${editId}` : "/api/daepyecha", {
         method: isEdit ? "PUT" : "POST",

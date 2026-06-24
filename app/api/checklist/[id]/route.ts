@@ -93,6 +93,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const isConfirmDoc = variant === "gongyong" || variant === "gosi";
   const docLabel = String(meta.doc_label || "설치확인서");
   const docName = isConfirmDoc ? docLabel : `설치완료 체크리스트${variant === "regional" ? "(지역)" : tagless ? "(태그리스)" : ""}`;
+  // 수도권 체크리스트 모달은 jpg도 함께 전송 → 팀즈에는 JPG로 업로드(보관본은 PDF 유지).
+  const jpgFile = form.get("jpg");
+  const hasJpg = jpgFile instanceof File;
+  const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
+  const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel) : checklistFileName(operator, installDate, tagless);
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
@@ -100,8 +105,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
       `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
-    fileName: isConfirmDoc ? gongyongFileName(operator, installDate, docLabel) : checklistFileName(operator, installDate, tagless),
-    pdf: bytes,
+    fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
+    pdf: relayBytes,
+    contentType: hasJpg ? "image/jpeg" : "application/pdf",
   });
 
   return NextResponse.json({ id: params.id });

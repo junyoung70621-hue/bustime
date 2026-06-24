@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────
-// ConfirmationForm DOM 노드 → A4 PDF Blob (클라이언트 전용)
+// ConfirmationForm DOM 노드 → A4 PDF / JPG Blob (클라이언트 전용)
 //   html2canvas-pro 로 래스터화 → jsPDF A4 1페이지. 폰트 로드 후 캡처.
+//   보관본은 PDF, 팀즈 업로드용으로 같은 캡처에서 JPG도 생성(수도권).
 // ─────────────────────────────────────────────────────────────
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
-export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
-  // 한글 등 웹폰트 로드 완료 후 캡처(글자 깨짐 방지)
+// 폼 노드를 캔버스로 래스터화(한글 웹폰트 로드 완료 후 캡처)
+async function rasterize(node: HTMLElement): Promise<HTMLCanvasElement> {
   if (typeof document !== "undefined" && document.fonts?.ready) {
     try {
       await document.fonts.ready;
@@ -20,7 +21,7 @@ export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
   const targetW = node.scrollWidth || 794;
   const targetH = node.scrollHeight;
 
-  const canvas = await html2canvas(node, {
+  return html2canvas(node, {
     scale: 2,
     backgroundColor: "#ffffff",
     useCORS: true,
@@ -30,7 +31,10 @@ export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
     windowWidth: targetW,
     windowHeight: targetH,
   });
+}
 
+// 캔버스 → A4 1페이지 PDF Blob
+function canvasToPdf(canvas: HTMLCanvasElement): Blob {
   const img = canvas.toDataURL("image/jpeg", 0.8);
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
@@ -52,4 +56,25 @@ export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
   const x = (pageW - w) / 2;
   pdf.addImage(img, "JPEG", x, margin, w, h);
   return pdf.output("blob");
+}
+
+// 캔버스 → JPG Blob
+function canvasToJpg(canvas: HTMLCanvasElement, quality = 0.9): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("JPG 변환 실패"))),
+      "image/jpeg",
+      quality,
+    );
+  });
+}
+
+export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {
+  return canvasToPdf(await rasterize(node));
+}
+
+/** PDF(보관용)와 JPG(팀즈 업로드용)를 한 번의 캡처로 동시 생성 */
+export async function generatePdfAndJpg(node: HTMLElement): Promise<{ pdf: Blob; jpg: Blob }> {
+  const canvas = await rasterize(node);
+  return { pdf: canvasToPdf(canvas), jpg: await canvasToJpg(canvas) };
 }

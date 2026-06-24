@@ -37,7 +37,8 @@ export async function sendRelayMail(opts: {
   subject: string;
   text: string;
   fileName: string;
-  pdf: Uint8Array;
+  pdf: Uint8Array; // 첨부 바이트(PDF 또는 JPG)
+  contentType?: string; // 기본 application/pdf, 팀즈 JPG 업로드 시 image/jpeg
 }): Promise<void> {
   const host = process.env.SMTP_HOST;
   const to = process.env.RELAY_MAIL_TO;
@@ -59,7 +60,11 @@ export async function sendRelayMail(opts: {
       subject: opts.subject,
       text: opts.text,
       attachments: [
-        { filename: opts.fileName, content: Buffer.from(opts.pdf), contentType: "application/pdf" },
+        {
+          filename: opts.fileName,
+          content: Buffer.from(opts.pdf),
+          contentType: opts.contentType || "application/pdf",
+        },
       ],
     });
   } catch (e) {
@@ -69,7 +74,8 @@ export async function sendRelayMail(opts: {
 
 export type RelayPayload = {
   fileName: string;
-  pdf: Uint8Array;
+  pdf: Uint8Array; // 첨부 바이트(PDF 또는 JPG)
+  contentType?: string; // 기본 application/pdf
   recordId: string;
   center: string;
   operator: string;
@@ -91,5 +97,5 @@ export async function relayPdf(p: RelayPayload): Promise<void> {
     `센터: ${p.center}\n운수사: ${p.operator} ${p.officeType}\n모델: ${p.model}\n` +
     `용도: ${p.purpose}\n지급일: ${p.issuedDate}\n` +
     `차량: ${p.vehicleCount}대 ${p.vehicleNumbers}\nID: ${p.recordId}`;
-  await sendRelayMail({ subject, text, fileName: p.fileName, pdf: p.pdf });
+  await sendRelayMail({ subject, text, fileName: p.fileName, pdf: p.pdf, contentType: p.contentType });
 }

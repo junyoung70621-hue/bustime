@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
-import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
 
@@ -96,7 +96,7 @@ export default function ChecklistModal({
     setError(null);
     setSaving(true);
     try {
-      const blob = await generatePdfBlob(captureRef.current);
+      const { pdf, jpg } = await generatePdfAndJpg(captureRef.current);
       const meta = {
         center: data.center,
         operator: data.tagless ? `(태그리스)${data.operatorName}` : data.operatorName,
@@ -109,7 +109,8 @@ export default function ChecklistModal({
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };
       const fd = new FormData();
-      fd.append("pdf", blob, "checklist.pdf");
+      fd.append("pdf", pdf, "checklist.pdf");
+      fd.append("jpg", jpg, "checklist.jpg"); // 팀즈 업로드용(수도권)
       fd.append("meta", JSON.stringify(meta));
       const res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
         method: isEdit ? "PUT" : "POST",
