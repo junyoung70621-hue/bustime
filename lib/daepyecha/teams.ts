@@ -12,12 +12,19 @@ import nodemailer from "nodemailer";
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
 // 대수 표기: 1대 이상이면 "(N대)", 아니면 빈 문자열(파일명에서 생략)
 const countTag = (count: number) => (count > 0 ? `(${count}대)` : "");
+// 차량 표기: 차량번호 1대면 그 번호, 여러대면 "첫번호(N대)", 번호 없으면 대수만 "(N대)"
+function vehicleTag(vehicleNumbers: string, count = 0): string {
+  const plates = vehicleNumbers.split(",").map((s) => s.trim()).filter(Boolean);
+  if (plates.length === 1) return plates[0];
+  if (plates.length > 1) return `${plates[0]}(${plates.length}대)`;
+  return countTag(count);
+}
 
-/** 자재 파일명: "자재지급확인서 운수사명 (N대) 날짜.pdf"(태그리스만 접두).
- *  차량번호는 여러 대일 수 있어 운수사명 뒤 대수로 표기. */
-export function pdfFileName(operator: string, issuedDate: string, tagless = false, count = 0): string {
+/** 자재 파일명: "자재지급확인서 운수사명 {차량표기} 날짜.pdf"(태그리스만 접두).
+ *  차량번호 1대면 번호, 여러대면 첫번호(N대), 번호 없으면 (N대). */
+export function pdfFileName(operator: string, issuedDate: string, tagless = false, vehicleNumbers = "", count = 0): string {
   const prefix = tagless ? "(태그리스)" : "";
-  const parts = ["자재지급확인서", safeName(operator), countTag(count), issuedDate || ""].filter(Boolean);
+  const parts = ["자재지급확인서", safeName(operator), safeName(vehicleTag(vehicleNumbers, count)), issuedDate || ""].filter(Boolean);
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
@@ -81,6 +88,53 @@ export async function sendRelayMail(opts: {
     });
   } catch (e) {
     console.error("Teams 릴레이 메일 발송 실패:", e);
+  }
+}
+
+/** 증빙사진 다중 첨부 릴레이(수도권 전용). 실패해도 throw하지 않음.
+ *  제목 "대폐차사진|수도권|{센터}|{운수사}|{차량번호}|{날짜}" → 플로우가 prefix로 분기,
+ *  split('|')로 센터[2]/운수사[3]/차량번호[4] 추출해 사진/수도권/센터/운수사/차량번호 폴더에 저장.
+ *  파일명(label.jpg)이 곧 Teams 저장 파일명. SMTP 미설정·사진 0장이면 즉시 비활성. */
+export async function sendPhotoRelayMail(opts: {
+  center: string;
+  operator: string;
+  vehicleNo: string;
+  installDate: string;
+  photos: { filename: string; bytes: Uint8Array }[];
+}): Promise<void> {
+  const host = process.env.SMTP_HOST;
+  const to = process.env.RELAY_MAIL_TO;
+  if (!host || !to || opts.photos.length === 0) return; // 미설정/사진없음 → 비활성
+
+  const subject = `대폐차사진|수도권|${safeName(opts.center)}|${safeName(opts.operator)}|${safeName(opts.vehicleNo)}|${opts.installDate}`;
+  const text =
+    `대폐차 증빙사진 (수도권)\n` +
+    `센터: ${opts.center}\n운수사: ${opts.operator}\n차량번호: ${opts.vehicleNo}\n` +
+    `설치일: ${opts.installDate}\n장수: ${opts.photos.length}장`;
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === "true",
+      auth:
+        process.env.SMTP_USER && process.env.SMTP_PASS
+          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+          : undefined,
+    });
+    await transporter.sendMail({
+      from: process.env.RELAY_MAIL_FROM || process.env.SMTP_USER,
+      to,
+      subject,
+      text,
+      attachments: opts.photos.map((p) => ({
+        filename: p.filename,
+        content: Buffer.from(p.bytes),
+        contentType: "image/jpeg",
+      })),
+    });
+  } catch (e) {
+    console.error("Teams 사진 릴레이 메일 발송 실패:", e);
   }
 }
 

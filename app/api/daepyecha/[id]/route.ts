@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const jpgFile = form.get("jpg");
   const hasJpg = jpgFile instanceof File;
   const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
-  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), Number(meta.vehicle_count ?? 0));
+  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), String(meta.vehicle_numbers ?? ""), Number(meta.vehicle_count ?? 0));
   const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
   const { error } = await sb!
