@@ -51,9 +51,9 @@ export async function sendRelayMail(opts: {
   const to = process.env.RELAY_MAIL_TO;
   if (!host || !to) return; // 미설정 → 비활성
 
-  // 제목 끝에 "|{신규|수정}|{이전파일명}" 추가(기존 split('|')[1]=센터 파싱과 호환).
-  //   플로우: [4]="수정" 이고 [5]가 있으면 그 파일을 삭제한 뒤 첨부 저장.
-  const op = opts.action === "updated" ? "수정" : "신규";
+  // 제목 끝에 "|{new|update}|{이전파일명}" 추가(기존 split('|')[1]=센터 파싱과 호환).
+  //   플로우: [4]="update" 이고 [5]가 있으면 그 파일을 삭제한 뒤 첨부 저장.
+  const op = opts.action === "updated" ? "update" : "new";
   const subject = `${opts.subject}|${op}|${opts.replaceFile ?? ""}`;
 
   try {
