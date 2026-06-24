@@ -7,7 +7,7 @@
 //   ※ 서명은 DB에 보관되어 수정 시 그대로 유지됨(변경 시에만 재서명).
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
-import { itemsForModel, itemsForTagless } from "@/lib/daepyecha/templates";
+import { itemsForModel, itemsForTagless, firstUnselectedVariant } from "@/lib/daepyecha/templates";
 import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import type { ConfirmationRow, FormState, Model, NewReused } from "@/lib/daepyecha/types";
 import Step1Input from "./Step1Input";
@@ -157,6 +157,8 @@ export default function DaepyechaModal({
     if (!data.operator.trim()) return setError("운수사를 입력하세요.");
     if (!data.model) return setError("모델을 선택하세요.");
     if (!data.vehicleCount || data.vehicleCount <= 0) return setError("수량(대수)을 입력하세요.");
+    const missVar = firstUnselectedVariant(data.items);
+    if (missVar) return setError(`"${missVar}" 형을 선택하세요. (형 선택 필수)`);
     setError(null);
     setStep("sign");
   }

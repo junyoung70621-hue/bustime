@@ -12,7 +12,7 @@ import type { RegJajaeModel, RegJajaePurpose } from "@/lib/daepyecha-regional/te
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
 import type { ConfirmationRow, FormState, ItemState, NewReused, OfficeType, Purpose } from "@/lib/daepyecha/types";
 import type { Region } from "@/lib/checklist-regional/types";
-import { itemVariants } from "@/lib/daepyecha/templates";
+import { itemVariants, firstUnselectedVariant } from "@/lib/daepyecha/templates";
 import ConfirmationForm from "@/app/daepyecha/ConfirmationForm";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 
@@ -144,6 +144,8 @@ export default function RegionalJajaeModal({
     if (!data.operator.trim()) return setError("운수사를 입력하세요.");
     if (!data.model) return setError("모델을 선택하세요.");
     if (!data.vehicleCount || data.vehicleCount <= 0) return setError("수량(대수)을 입력하세요.");
+    const missVar = firstUnselectedVariant(data.items);
+    if (missVar) return setError(`"${missVar}" 형을 선택하세요. (형 선택 필수)`);
     setError(null);
     setStep("sign");
   }

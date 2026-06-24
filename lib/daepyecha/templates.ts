@@ -32,6 +32,12 @@ export function itemDisplayName(it: ItemState): string {
   return it.name.replace(/\([^()]*\)\s*$/, `(${it.variant})`);
 }
 
+/** 형 선택형인데 아직 미선택인 첫 품목명 반환(없으면 null) — 저장 전 필수검증용 */
+export function firstUnselectedVariant(items: ItemState[]): string | null {
+  const miss = items.find((it) => itemVariants(it.name) && !it.variant);
+  return miss ? miss.name : null;
+}
+
 export const CENTERS: Center[] = ["강남", "강서", "강북", "강동"];
 export const MODELS: Model[] = ["B620", "B700", "B710", "B800"];
 export const PURPOSES: Purpose[] = ["대폐차", "증차"];
