@@ -28,7 +28,7 @@ export default function RegionalChecklistForm({ data }: { data: RegFormState }) 
 
       <RegHeader data={data} />
       <p className="mb-2 text-center text-[11px]">
-        <span className="mr-6">{fmtDate(data.confirmDate)}</span>
+        <span className="mr-6">{fmtDate(data.inspectDate)}</span>
         <span className="font-bold">설치일과 체크리스트 확인일의 일치여부</span>를 확인합니다.
       </p>
 

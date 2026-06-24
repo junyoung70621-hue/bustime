@@ -97,7 +97,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const jpgFile = form.get("jpg");
   const hasJpg = jpgFile instanceof File;
   const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
-  const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel) : checklistFileName(operator, installDate, tagless);
+  const vehNo = String(meta.vehicle_numbers ?? "");
+  const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehNo) : checklistFileName(operator, installDate, tagless, vehNo);
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:

@@ -11,23 +11,23 @@ import nodemailer from "nodemailer";
 
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
 
-/** 파일명에 못 쓰는 문자 제거 후 "자재지급확인서 운수사명 날짜.pdf" 생성(태그리스만 접두) */
-export function pdfFileName(operator: string, issuedDate: string, tagless = false): string {
+/** 파일명에 못 쓰는 문자 제거 후 "자재지급확인서 운수사명 차량번호 날짜.pdf" 생성(태그리스만 접두) */
+export function pdfFileName(operator: string, issuedDate: string, tagless = false, vehicleNumbers = ""): string {
   const prefix = tagless ? "(태그리스)" : "";
-  const parts = ["자재지급확인서", safeName(operator), issuedDate || ""].filter(Boolean);
+  const parts = ["자재지급확인서", safeName(operator), safeName(vehicleNumbers), issuedDate || ""].filter(Boolean);
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
-/** 체크리스트 파일명: "설치완료체크리스트 운수사명 날짜.pdf"(태그리스만 접두) */
-export function checklistFileName(operator: string, installDate: string, tagless = false): string {
+/** 체크리스트 파일명: "설치완료체크리스트 운수사명 차량번호 날짜.pdf"(태그리스만 접두) */
+export function checklistFileName(operator: string, installDate: string, tagless = false, vehicleNumbers = ""): string {
   const prefix = tagless ? "(태그리스)" : "";
-  const parts = ["설치완료체크리스트", safeName(operator), installDate || ""].filter(Boolean);
+  const parts = ["설치완료체크리스트", safeName(operator), safeName(vehicleNumbers), installDate || ""].filter(Boolean);
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
-/** 설치확인서(다차량 양식) 파일명: "{설치확인서|철수확인서} 운수사명 날짜.pdf" */
-export function gongyongFileName(operator: string, installDate: string, docName = "설치확인서"): string {
-  const parts = [docName, safeName(operator), installDate || ""].filter(Boolean);
+/** 설치확인서(다차량 양식) 파일명: "{설치확인서|철수확인서} 운수사명 차량번호 날짜.pdf" */
+export function gongyongFileName(operator: string, installDate: string, docName = "설치확인서", vehicleNumbers = ""): string {
+  const parts = [docName, safeName(operator), safeName(vehicleNumbers), installDate || ""].filter(Boolean);
   return `${parts.join(" ")}.pdf`;
 }
 

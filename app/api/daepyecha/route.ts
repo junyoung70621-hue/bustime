@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
   const jpgFile = form.get("jpg");
   const hasJpg = jpgFile instanceof File;
   const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
-  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless));
+  const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), String(meta.vehicle_numbers ?? ""));
   await relayPdf({
     fileName: hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName,
     pdf: relayBytes,
