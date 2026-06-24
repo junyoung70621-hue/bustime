@@ -98,7 +98,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const hasJpg = jpgFile instanceof File;
   const relayBytes = hasJpg ? new Uint8Array(await jpgFile.arrayBuffer()) : bytes;
   const vehNo = String(meta.vehicle_numbers ?? "");
-  const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehNo) : checklistFileName(operator, installDate, tagless, vehNo);
+  // 설치확인서는 차량 여러 대일 수 있어 대수로 표기, 체크리스트(단일)는 차량번호 유지
+  const vehCount = vehNo.split(",").map((s) => s.trim()).filter(Boolean).length;
+  const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehCount) : checklistFileName(operator, installDate, tagless, vehNo);
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:

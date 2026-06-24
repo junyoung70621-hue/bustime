@@ -10,24 +10,29 @@
 import nodemailer from "nodemailer";
 
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
+// 대수 표기: 1대 이상이면 "(N대)", 아니면 빈 문자열(파일명에서 생략)
+const countTag = (count: number) => (count > 0 ? `(${count}대)` : "");
 
-/** 파일명에 못 쓰는 문자 제거 후 "자재지급확인서 운수사명 차량번호 날짜.pdf" 생성(태그리스만 접두) */
-export function pdfFileName(operator: string, issuedDate: string, tagless = false, vehicleNumbers = ""): string {
+/** 자재 파일명: "자재지급확인서 운수사명 (N대) 날짜.pdf"(태그리스만 접두).
+ *  차량번호는 여러 대일 수 있어 운수사명 뒤 대수로 표기. */
+export function pdfFileName(operator: string, issuedDate: string, tagless = false, count = 0): string {
   const prefix = tagless ? "(태그리스)" : "";
-  const parts = ["자재지급확인서", safeName(operator), safeName(vehicleNumbers), issuedDate || ""].filter(Boolean);
+  const parts = ["자재지급확인서", safeName(operator), countTag(count), issuedDate || ""].filter(Boolean);
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
-/** 체크리스트 파일명: "설치완료체크리스트 운수사명 차량번호 날짜.pdf"(태그리스만 접두) */
+/** 체크리스트 파일명: "설치완료체크리스트 운수사명 차량번호 날짜.pdf"(태그리스만 접두).
+ *  체크리스트는 단일 차량 → 차량번호 표기 유지. */
 export function checklistFileName(operator: string, installDate: string, tagless = false, vehicleNumbers = ""): string {
   const prefix = tagless ? "(태그리스)" : "";
   const parts = ["설치완료체크리스트", safeName(operator), safeName(vehicleNumbers), installDate || ""].filter(Boolean);
   return `${prefix}${parts.join(" ")}.pdf`;
 }
 
-/** 설치확인서(다차량 양식) 파일명: "{설치확인서|철수확인서} 운수사명 차량번호 날짜.pdf" */
-export function gongyongFileName(operator: string, installDate: string, docName = "설치확인서", vehicleNumbers = ""): string {
-  const parts = [docName, safeName(operator), safeName(vehicleNumbers), installDate || ""].filter(Boolean);
+/** 설치확인서(다차량 양식) 파일명: "{설치확인서|철수확인서} 운수사명 (N대) 날짜.pdf".
+ *  차량번호는 여러 대일 수 있어 운수사명 뒤 대수로 표기. */
+export function gongyongFileName(operator: string, installDate: string, docName = "설치확인서", count = 0): string {
+  const parts = [docName, safeName(operator), countTag(count), installDate || ""].filter(Boolean);
   return `${parts.join(" ")}.pdf`;
 }
 
