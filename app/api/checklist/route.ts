@@ -9,7 +9,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
-import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, sendPhotoRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -137,9 +137,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
+  // 수도권 체크리스트(variant=default)는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
+  const caption = variant === "default" ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
+      caption +
       `${docName}\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
@@ -149,6 +152,17 @@ export async function POST(req: NextRequest) {
     contentType: hasJpg ? "image/jpeg" : "application/pdf",
     action: "created",
   });
+
+  // 증빙사진 릴레이(수도권 전용) — 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장.
+  if (variant === "default") {
+    const photoFiles = form.getAll("photos").filter((f): f is File => f instanceof File);
+    if (photoFiles.length > 0) {
+      const photos = await Promise.all(
+        photoFiles.map(async (f) => ({ filename: f.name, bytes: new Uint8Array(await f.arrayBuffer()) })),
+      );
+      await sendPhotoRelayMail({ center, operator, vehicleNo: vehNo, installDate, photos });
+    }
+  }
 
   return NextResponse.json({ id: data.id });
 }

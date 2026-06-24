@@ -8,6 +8,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
 import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
+import { emptyPhotoSlots, compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
+import PhotoStep from "./PhotoStep";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
 
@@ -52,6 +54,13 @@ export default function ChecklistModal({
   const [pad, setPad] = useState<null | "installer" | "operator">(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<CkFormState>(() => emptyCkForm(todayStr()));
+  // 신규 작성은 사진 촬영 단계부터, 수정은 폼으로 바로 진입(사진 재업로드 안 함)
+  const [step, setStep] = useState<"photos" | "form">(isEdit ? "form" : "photos");
+  const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
+  // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  useEffect(() => () => { for (const s of photosRef.current) if (s.preview) URL.revokeObjectURL(s.preview); }, []);
 
   useEffect(() => {
     if (!editId) return;
@@ -112,6 +121,12 @@ export default function ChecklistModal({
       fd.append("pdf", pdf, "checklist.pdf");
       fd.append("jpg", jpg, "checklist.jpg"); // 팀즈 업로드용(수도권)
       fd.append("meta", JSON.stringify(meta));
+      // 증빙사진(있는 슬롯만): 압축 후 첨부. 파일명=라벨.jpg → Teams 저장 파일명.
+      for (const s of photos) {
+        if (s.na || !s.file) continue;
+        const blob = await compressImage(s.file);
+        fd.append("photos", blob, `${s.label}.jpg`);
+      }
       const res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
         method: isEdit ? "PUT" : "POST",
         body: fd,
@@ -141,15 +156,26 @@ export default function ChecklistModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-          <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정" : "설치 완료 체크리스트"}</h2>
+          <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : "설치 완료 체크리스트"}</h2>
           <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
           {loading ? (
             <p className="py-10 text-center text-sm text-slate-400">불러오는 중…</p>
+          ) : step === "photos" ? (
+            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("form")} />
           ) : (
             <div className="flex flex-col gap-3">
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={() => setStep("photos")}
+                  className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
+                >
+                  ← 사진 촬영
+                </button>
+              )}
               {isEdit && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <label className="mb-1 block text-sm font-bold text-amber-800">수정자명 (필수)</label>
