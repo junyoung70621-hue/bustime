@@ -4,7 +4,7 @@
 // 신규 작성 1단계: 기본 정보 입력
 //   센터 / 운수사 / 모델 / 수량(대수) / 차량번호 / 지급날짜 + 품목별 수량·신규재활용
 // ─────────────────────────────────────────────────────────────
-import { CENTERS, MODELS, PURPOSES, OFFICE_TYPES } from "@/lib/daepyecha/templates";
+import { CENTERS, MODELS, PURPOSES, OFFICE_TYPES, itemVariants } from "@/lib/daepyecha/templates";
 import type { FormState, Model, NewReused, Center } from "@/lib/daepyecha/types";
 
 export default function Step1Input({
@@ -15,6 +15,7 @@ export default function Step1Input({
   onCountChange,
   onItemQty,
   onItemNR,
+  onItemVariant,
   onNext,
   error,
 }: {
@@ -25,6 +26,7 @@ export default function Step1Input({
   onCountChange: (n: number) => void;
   onItemQty: (i: number, qty: number) => void;
   onItemNR: (i: number, v: NewReused) => void;
+  onItemVariant: (i: number, v: string) => void;
   onNext: () => void;
   error: string | null;
 }) {
@@ -161,36 +163,60 @@ export default function Step1Input({
             {data.tagless ? "대당 기본수량 × 대수 자동 입력, 수정 가능" : "수량은 대수로 자동 입력, 수정 가능"}
           </p>
           <ul className="flex flex-col divide-y divide-slate-100">
-            {data.items.map((it, i) => (
-              <li key={i} className="flex items-center gap-2 px-3 py-2">
-                <span className="w-5 shrink-0 text-xs text-slate-400">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.name}</span>
-                {it.hasNewReused && (
-                  <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
-                    {(["신규", "재활용"] as NewReused[]).map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => onItemNR(i, v)}
-                        className={`px-2 py-1 text-xs font-semibold ${
-                          it.newReused === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </span>
-                )}
-                <input
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  value={it.qty || ""}
-                  onChange={(e) => onItemQty(i, Number(e.target.value) || 0)}
-                  className="h-8 w-14 shrink-0 rounded-lg border border-slate-300 px-2 text-center text-sm outline-none focus:border-brand-500"
-                />
-              </li>
-            ))}
+            {data.items.map((it, i) => {
+              const variantOpts = itemVariants(it.name);
+              return (
+                <li key={i} className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 shrink-0 text-xs text-slate-400">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.name}</span>
+                    {it.hasNewReused && (
+                      <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
+                        {(["신규", "재활용"] as NewReused[]).map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => onItemNR(i, v)}
+                            className={`px-2 py-1 text-xs font-semibold ${
+                              it.newReused === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={it.qty || ""}
+                      onChange={(e) => onItemQty(i, Number(e.target.value) || 0)}
+                      className="h-8 w-14 shrink-0 rounded-lg border border-slate-300 px-2 text-center text-sm outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  {variantOpts && (
+                    <div className="mt-1.5 flex items-center gap-2 pl-7">
+                      <span className="shrink-0 text-xs text-slate-400">형 선택 (선택 시 그 형만 표기)</span>
+                      <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
+                        {variantOpts.map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => onItemVariant(i, v)}
+                            className={`px-2 py-1 text-xs font-semibold ${
+                              it.variant === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : (

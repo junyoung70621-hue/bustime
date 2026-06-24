@@ -142,6 +142,15 @@ export default function DaepyechaModal({
       items: d.items.map((it, idx) => (idx === i ? { ...it, newReused: v } : it)),
     }));
   }
+  // 형(type) 선택: 같은 값 다시 누르면 해제(전체 표기로 복귀)
+  function onItemVariant(i: number, v: string) {
+    setData((d) => ({
+      ...d,
+      items: d.items.map((it, idx) =>
+        idx === i ? { ...it, variant: it.variant === v ? null : v } : it,
+      ),
+    }));
+  }
 
   function goSign() {
     if (!data.center) return setError("센터를 선택하세요.");
@@ -219,6 +228,7 @@ export default function DaepyechaModal({
               onCountChange={onCountChange}
               onItemQty={onItemQty}
               onItemNR={onItemNR}
+              onItemVariant={onItemVariant}
               onNext={goSign}
               error={error}
             />

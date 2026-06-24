@@ -24,6 +24,9 @@ export type ItemState = {
   hasNewReused: boolean;
   newReused: NewReused | null; // hasNewReused일 때만 값
   perUnit?: number; // 차량 1대당 기본 수량(대수 변경 시 qty 재계산용, 미지정 시 1)
+  // 형(type) 선택형 품목(예: "운전자봉 (U형 , ㄱ형)") — 선택값. null/미지정=미선택(전체 표기).
+  // 선택지는 품목명에서 동적 감지(itemVariants) → 저장은 선택값만.
+  variant?: string | null;
 };
 
 /** 작성 중 폼 전체 상태 */

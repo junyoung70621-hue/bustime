@@ -12,6 +12,7 @@ import type { RegJajaeModel, RegJajaePurpose } from "@/lib/daepyecha-regional/te
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
 import type { ConfirmationRow, FormState, ItemState, NewReused, OfficeType, Purpose } from "@/lib/daepyecha/types";
 import type { Region } from "@/lib/checklist-regional/types";
+import { itemVariants } from "@/lib/daepyecha/templates";
 import ConfirmationForm from "@/app/daepyecha/ConfirmationForm";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 
@@ -132,6 +133,10 @@ export default function RegionalJajaeModal({
   }
   function onItemNR(i: number, v: NewReused) {
     setData((d) => ({ ...d, items: d.items.map((it, idx) => (idx === i ? { ...it, newReused: v } : it)) }));
+  }
+  // 형(type) 선택: 같은 값 다시 누르면 해제(전체 표기로 복귀)
+  function onItemVariant(i: number, v: string) {
+    setData((d) => ({ ...d, items: d.items.map((it, idx) => (idx === i ? { ...it, variant: it.variant === v ? null : v } : it)) }));
   }
 
   function goSign() {
@@ -257,20 +262,35 @@ export default function RegionalJajaeModal({
                 <div className="rounded-xl border border-slate-200">
                   <p className="border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-600">품목 ({data.items.length}) — 수량은 대수로 자동 입력, 수정 가능</p>
                   <ul className="flex flex-col divide-y divide-slate-100">
-                    {data.items.map((it, i) => (
-                      <li key={i} className="flex items-center gap-2 px-3 py-2">
-                        <span className="w-5 shrink-0 text-xs text-slate-400">{i + 1}</span>
-                        <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.name}</span>
-                        {it.hasNewReused && (
-                          <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
-                            {(["신규", "재활용"] as NewReused[]).map((v) => (
-                              <button key={v} type="button" onClick={() => onItemNR(i, v)} className={`px-2 py-1 text-xs font-semibold ${it.newReused === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>{v}</button>
-                            ))}
-                          </span>
-                        )}
-                        <input type="number" min={0} inputMode="numeric" value={it.qty || ""} onChange={(e) => onItemQty(i, Number(e.target.value) || 0)} className="h-8 w-14 shrink-0 rounded-lg border border-slate-300 px-2 text-center text-sm outline-none focus:border-brand-500" />
-                      </li>
-                    ))}
+                    {data.items.map((it, i) => {
+                      const variantOpts = itemVariants(it.name);
+                      return (
+                        <li key={i} className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 shrink-0 text-xs text-slate-400">{i + 1}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.name}</span>
+                            {it.hasNewReused && (
+                              <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
+                                {(["신규", "재활용"] as NewReused[]).map((v) => (
+                                  <button key={v} type="button" onClick={() => onItemNR(i, v)} className={`px-2 py-1 text-xs font-semibold ${it.newReused === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>{v}</button>
+                                ))}
+                              </span>
+                            )}
+                            <input type="number" min={0} inputMode="numeric" value={it.qty || ""} onChange={(e) => onItemQty(i, Number(e.target.value) || 0)} className="h-8 w-14 shrink-0 rounded-lg border border-slate-300 px-2 text-center text-sm outline-none focus:border-brand-500" />
+                          </div>
+                          {variantOpts && (
+                            <div className="mt-1.5 flex items-center gap-2 pl-7">
+                              <span className="shrink-0 text-xs text-slate-400">형 선택 (선택 시 그 형만 표기)</span>
+                              <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
+                                {variantOpts.map((v) => (
+                                  <button key={v} type="button" onClick={() => onItemVariant(i, v)} className={`px-2 py-1 text-xs font-semibold ${it.variant === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>{v}</button>
+                                ))}
+                              </span>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ) : (

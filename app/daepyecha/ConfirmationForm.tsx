@@ -8,6 +8,7 @@
 //      → 레이아웃은 table + inline-block + margin 으로만 구성.
 // ─────────────────────────────────────────────────────────────
 import type { FormState } from "@/lib/daepyecha/types";
+import { itemDisplayName } from "@/lib/daepyecha/templates";
 
 const td = "border border-slate-800 px-2 py-1 align-middle";
 const th = "border border-slate-800 px-1 py-1 bg-slate-100 font-bold text-center";
@@ -59,7 +60,7 @@ export default function ConfirmationForm({ data, centerSuffix = "센터" }: { da
           {data.items.map((it, i) => (
             <tr key={i}>
               <td className={`${td} text-center`}>{i + 1}</td>
-              <td className={td}>{it.name}</td>
+              <td className={td}>{itemDisplayName(it)}</td>
               <td className={`${td} text-center font-bold`}>{it.qty || ""}</td>
               <td className={`${td} text-center`}>
                 <NewReusedCell hasNewReused={it.hasNewReused} newReused={it.newReused} />

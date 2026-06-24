@@ -4,7 +4,33 @@
 //   hasNewReused = 원본 비고에 "(신규 , 재활용)" 표기가 있던 품목
 // ※ 실제 양식과 품목/비고가 다르면 이 파일만 수정하면 됨.
 // ─────────────────────────────────────────────────────────────
-import type { Model, Center, ItemTemplate, Purpose, OfficeType } from "./types";
+import type { Model, Center, ItemTemplate, ItemState, Purpose, OfficeType } from "./types";
+
+// ─────────────────────────────────────────────────────────────
+// 형(type) 선택형 품목 — 품목명 접미사로 감지. 선택 시 해당 형만 표기.
+//   예) "운전자봉 (U형 , ㄱ형)" → U형/ㄱ형 중 택1 → "운전자봉 (U형)"
+//   전 지역(수도권·지역) 공통. 선택지는 이름에서 감지하므로 저장은 선택값만.
+// ─────────────────────────────────────────────────────────────
+const VARIANT_SUFFIXES: { suffix: string; options: string[] }[] = [
+  { suffix: "(U형 , ㄱ형)", options: ["U형", "ㄱ형"] },
+  { suffix: "(가로형 , 세로형)", options: ["가로형", "세로형"] },
+  { suffix: "(1.5M / 6M)", options: ["1.5M", "6M"] },
+  { suffix: "(일반 , 카운티용)", options: ["일반", "카운티용"] },
+];
+
+const stripSpace = (s: string) => s.replace(/\s+/g, "");
+
+/** 품목명이 선택형이면 선택지 배열, 아니면 undefined */
+export function itemVariants(name: string): string[] | undefined {
+  const n = stripSpace(name);
+  return VARIANT_SUFFIXES.find((v) => n.endsWith(stripSpace(v.suffix)))?.options;
+}
+
+/** 표시용 품목명 — 선택된 형이 있으면 접미사를 그 형만으로 치환 */
+export function itemDisplayName(it: ItemState): string {
+  if (!it.variant || !itemVariants(it.name)) return it.name;
+  return it.name.replace(/\([^()]*\)\s*$/, `(${it.variant})`);
+}
 
 export const CENTERS: Center[] = ["강남", "강서", "강북", "강동"];
 export const MODELS: Model[] = ["B620", "B700", "B710", "B800"];
