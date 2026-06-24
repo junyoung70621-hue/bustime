@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
-import { REGIONS, GONGYONG_BUS_TYPES, MAX_VEHICLES, POHANG_COMPANIES, emptyVehicle, emptyGongyongForm } from "@/lib/gongyong/templates";
+import { REGIONS, GONGYONG_BUS_TYPES, MAX_VEHICLES, POHANG_COMPANIES, REGION_COMPANIES, emptyVehicle, emptyGongyongForm } from "@/lib/gongyong/templates";
 import type { GongyongForm, GongyongRow, GongyongBusType, GongyongDocType, GongyongInstallType, GongyongOffice, GongyongVehicle } from "@/lib/gongyong/types";
 import type { Region } from "@/lib/checklist-regional/types";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
@@ -83,6 +83,13 @@ export default function GongyongModal({
     const co = POHANG_COMPANIES[idx];
     if (!co) return;
     patch({ companyName: co.company, officeName: co.office, address: co.address, phone: co.phone });
+  }
+  // 대전·세종 운수사 선택 → 운수사명/주소/전화 자동입력
+  const regionCompanies = REGION_COMPANIES[data.region] ?? [];
+  function selectRegionCompany(idx: number) {
+    const co = regionCompanies[idx];
+    if (!co) return;
+    patch({ operatorName: co.name, address: co.address, phone: co.phone });
   }
 
   async function save() {
@@ -190,6 +197,16 @@ export default function GongyongModal({
                   </>
                 ) : (
                   <>
+                    {regionCompanies.length > 0 && (
+                      <div className="col-span-2">
+                        <L t="운수사 선택 (주소·전화 자동입력)">
+                          <select value="" onChange={(e) => { if (e.target.value !== "") selectRegionCompany(Number(e.target.value)); }} className={inp}>
+                            <option value="">운수사 선택…</option>
+                            {regionCompanies.map((co, idx) => (<option key={idx} value={idx}>{co.name}</option>))}
+                          </select>
+                        </L>
+                      </div>
+                    )}
                     <L t="버스 구분">
                       <select value={data.busType} onChange={(e) => patch({ busType: e.target.value as GongyongBusType })} className={inp}>
                         <option value="">선택</option>
