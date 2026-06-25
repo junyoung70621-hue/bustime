@@ -30,6 +30,9 @@ import ChecklistForm from "./ChecklistForm";
 // pdf.ts에서 가져와 pdf 청크 신선도까지 함께 확인.
 const BUILD_TAG = PDF_BUILD;
 
+// 신규 작성 임시저장 키(브라우저 localStorage). 사진은 파일이라 미포함.
+const DRAFT_KEY = "checklist-draft-v1";
+
 function todayStr() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -58,8 +61,22 @@ export default function ChecklistModal({
   const [pad, setPad] = useState<null | "installer" | "operator">(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<CkFormState>(() => emptyCkForm(todayStr()));
-  // 신규 작성은 사진 촬영 단계부터, 수정은 폼으로 바로 진입(사진 재업로드 안 함)
-  const [step, setStep] = useState<"photos" | "form">(isEdit ? "form" : "photos");
+  // 임시저장 복원용: 마운트 시점에 한 번만 localStorage에서 읽어 보관(이후 자동저장이
+  // 덮어써도 이 값은 유지 → 복원 배너에 사용). 신규 작성에서만.
+  const [draft] = useState<CkFormState | null>(() => {
+    if (isEdit || typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      return raw ? (JSON.parse(raw) as CkFormState) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [draftHandled, setDraftHandled] = useState(false); // 복원/무시 후 배너 숨김
+  const [draftSaved, setDraftSaved] = useState(false); // 임시저장 버튼 피드백
+  // 신규 작성은 사진 촬영 단계부터. 단, 임시저장본이 있으면 폼으로 바로 진입(복원 편의).
+  // 수정은 폼으로 바로 진입(사진 재업로드 안 함).
+  const [step, setStep] = useState<"photos" | "form">(isEdit || draft ? "form" : "photos");
   const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
   // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
   const photosRef = useRef(photos);
@@ -88,6 +105,32 @@ export default function ChecklistModal({
       alive = false;
     };
   }, [editId]);
+
+  // 신규 작성 자동 임시저장: 내용이 어느 정도 채워졌을 때만 저장(빈 폼이 기존 임시본을 덮지 않게).
+  useEffect(() => {
+    if (isEdit || typeof window === "undefined") return;
+    const filled = data.model || data.center || data.operatorName.trim() || data.vehicleNo.trim();
+    if (!filled) return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      /* 용량 초과 등은 무시 */
+    }
+    setDraftSaved(false); // 내용이 바뀌면 "저장됨 ✓" 표시 해제
+  }, [data, isEdit]);
+
+  const saveDraft = () => {
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      setDraftSaved(true);
+    } catch {
+      setError("임시저장 실패(브라우저 저장공간 부족)");
+    }
+  };
+  const restoreDraft = () => {
+    if (draft) setData({ ...emptyCkForm(todayStr()), ...draft });
+    setDraftHandled(true);
+  };
 
   const patch = (p: Partial<CkFormState>) => setData((d) => ({ ...d, ...p }));
   const toggleCheck = (k: string) => setData((d) => ({ ...d, checks: { ...d.checks, [k]: !d.checks[k] } }));
@@ -143,6 +186,13 @@ export default function ChecklistModal({
       }
       const json = await res.json();
       if (!res.ok) throw new Error(`[서버] ${json.error ?? "저장 실패"}`);
+      if (!isEdit) {
+        try {
+          window.localStorage.removeItem(DRAFT_KEY); // 저장 성공 → 임시본 정리
+        } catch {
+          /* noop */
+        }
+      }
       onSaved();
     } catch (e) {
       const name = (e as { name?: string })?.name ?? "?";
@@ -186,6 +236,16 @@ export default function ChecklistModal({
                 >
                   ← 사진 촬영
                 </button>
+              )}
+              {!isEdit && draft && !draftHandled && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-sm font-bold text-emerald-800">임시저장된 작성 내용이 있어요</p>
+                  <p className="mt-0.5 text-xs text-emerald-700">불러오면 사진을 제외한 입력값·체크·서명이 복원됩니다.</p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={restoreDraft} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">불러오기</button>
+                    <button type="button" onClick={() => setDraftHandled(true)} className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700">새로 작성</button>
+                  </div>
+                </div>
               )}
               {isEdit && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -417,6 +477,16 @@ export default function ChecklistModal({
 
               {/* 배포 버전 확인용(아이폰 캐시 점검). 새 코드가 떴는지 이 표시로 확인. */}
               <p className="text-center text-[10px] text-slate-300">build {BUILD_TAG}</p>
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={saveDraft}
+                  disabled={saving}
+                  className="h-11 w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-600 disabled:opacity-50"
+                >
+                  {draftSaved ? "임시저장됨 ✓ (다음에 불러올 수 있어요)" : "임시저장 (작성 내용 보관)"}
+                </button>
+              )}
               <div className="flex gap-2 pb-1">
                 <button onClick={onClose} disabled={saving} className="h-12 flex-1 rounded-xl border border-slate-300 font-bold text-slate-600 disabled:opacity-50">취소</button>
                 <button onClick={save} disabled={saving} className="h-12 flex-[2] rounded-xl bg-brand-600 font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "저장 (PDF 보관)"}</button>
