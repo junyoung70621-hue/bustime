@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
-import { uploadCapturePublic } from "@/lib/daepyecha/capture";
+import { uploadCapturePublic, CAPTURE_BUCKET } from "@/lib/daepyecha/capture";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -147,6 +147,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   const { data: cur } = await sb!.from("checklist_confirmations").select("pdf_path").eq("id", params.id).single();
   if (cur?.pdf_path) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
+  // 공개 캡쳐(있으면)도 정리 — 고아 파일 방지. 없는 경로는 무시됨.
+  await sb!.storage.from(CAPTURE_BUCKET).remove([`${params.id}.jpg`]);
   const { error } = await sb!.from("checklist_confirmations").delete().eq("id", params.id);
   if (error) return NextResponse.json({ error: `영구삭제 실패: ${error.message}` }, { status: 500 });
   return NextResponse.json({ ok: true, deleted: true });
