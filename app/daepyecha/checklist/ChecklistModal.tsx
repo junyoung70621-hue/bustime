@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
-import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
+import { generatePdfAndJpg, PDF_BUILD } from "@/lib/daepyecha/pdf";
 import { emptyPhotoSlots, compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
 import PhotoStep from "./PhotoStep";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
@@ -26,8 +26,9 @@ import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
 
-// 배포 코드 식별용 빌드 태그(아이폰이 새 번들을 받았는지 화면에서 확인). 수정 때마다 올림.
-const BUILD_TAG = "pdf-diag-1";
+// 배포 코드 식별용 빌드 태그(아이폰이 새 번들을 받았는지 화면에서 확인).
+// pdf.ts에서 가져와 pdf 청크 신선도까지 함께 확인.
+const BUILD_TAG = PDF_BUILD;
 
 function todayStr() {
   const d = new Date();

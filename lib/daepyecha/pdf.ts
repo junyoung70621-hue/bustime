@@ -6,6 +6,9 @@
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
+// 이 상수가 화면에 새 값으로 보이면 pdf.ts 청크도 최신(아이폰 캐시 점검용).
+export const PDF_BUILD = "pdf-diag-2";
+
 // 폼 노드를 주어진 scale로 캔버스 래스터화(한글 웹폰트 로드 완료 후 캡처)
 async function rasterizeAt(node: HTMLElement, scale: number): Promise<HTMLCanvasElement> {
   // 모바일 화면 폭이 좁아도 폼이 찌그러지지 않도록 캡처 폭/창 폭을 폼 실제 폭으로 고정.
@@ -128,7 +131,14 @@ export async function generatePdfAndJpg(node: HTMLElement): Promise<{ pdf: Blob;
   // 캔버스 유효성을 보장하는 0.8 품질 data URL을 기준으로 캡처(검증 통과 캔버스 확보).
   const { canvas, dataUrl } = await rasterizeValid(node, 0.8);
   const pdf = makePdf(dataUrl, canvas);
-  // 팀즈용 JPG는 0.9 품질 시도, 실패(빈 결과) 시 검증된 0.8 data URL로 대체.
-  const jpgUrl = jpegDataUrl(canvas, 0.9) ?? dataUrl;
-  return { pdf, jpg: dataUrlToBlob(jpgUrl) };
+  // 팀즈용 JPG는 같은 캡처를 재사용한다. 이 dataUrl은 위 makePdf(jsPDF)에서 이미
+  // 디코드에 성공한 검증본이라 atob도 안전. (iOS에서 0.9로 재인코딩하면 검증을 통과
+  // 하면서도 atob가 거부하는 문자열이 나와 "did not match the expected pattern" 발생.)
+  let jpg: Blob;
+  try {
+    jpg = dataUrlToBlob(dataUrl);
+  } catch (e) {
+    throw new Error(`[JPG변환] ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return { pdf, jpg };
 }
