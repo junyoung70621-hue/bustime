@@ -66,12 +66,18 @@ async function rasterizeValid(
   );
 
   for (let attempt = 0; attempt < 6; attempt++) {
-    const canvas = await rasterizeAt(node, scale);
+    let canvas: HTMLCanvasElement;
+    try {
+      canvas = await rasterizeAt(node, scale);
+    } catch (e) {
+      // html2canvas 단계에서 throw(아이폰: 이미지/CSS 파싱 한계 등). 어느 단계인지 노출.
+      throw new Error(`[캡처] ${e instanceof Error ? e.message : String(e)}`);
+    }
     const dataUrl = jpegDataUrl(canvas, quality);
     if (dataUrl) return { canvas, dataUrl };
     scale *= 0.75; // 더 작은 캔버스로 재시도(기기 실제 한계에 적응)
   }
-  throw new Error("PDF 이미지 생성 실패 — 내용이 너무 길어 캔버스 한계를 넘었습니다.");
+  throw new Error("[인코딩] PDF 이미지 생성 실패 — 내용이 너무 길어 캔버스 한계를 넘었습니다.");
 }
 
 // data URL → Blob (toBlob이 한계 초과로 null을 돌려줄 때 우회용)
@@ -104,8 +110,12 @@ function makePdf(dataUrl: string, canvas: HTMLCanvasElement): Blob {
   }
 
   const x = (pageW - w) / 2;
-  pdf.addImage(dataUrl, "JPEG", x, margin, w, h);
-  return pdf.output("blob");
+  try {
+    pdf.addImage(dataUrl, "JPEG", x, margin, w, h);
+    return pdf.output("blob");
+  } catch (e) {
+    throw new Error(`[PDF생성] ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
 export async function generatePdfBlob(node: HTMLElement): Promise<Blob> {

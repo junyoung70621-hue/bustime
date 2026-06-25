@@ -127,12 +127,17 @@ export default function ChecklistModal({
         const blob = await compressImage(s.file);
         fd.append("photos", blob, `${s.label}.jpg`);
       }
-      const res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
-        method: isEdit ? "PUT" : "POST",
-        body: fd,
-      });
+      let res: Response;
+      try {
+        res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
+          method: isEdit ? "PUT" : "POST",
+          body: fd,
+        });
+      } catch (e) {
+        throw new Error(`[업로드] ${e instanceof Error ? e.message : String(e)}`);
+      }
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "저장 실패");
+      if (!res.ok) throw new Error(`[서버] ${json.error ?? "저장 실패"}`);
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "저장 중 오류");
