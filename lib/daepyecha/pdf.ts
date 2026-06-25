@@ -19,10 +19,23 @@ async function rasterize(node: HTMLElement): Promise<HTMLCanvasElement> {
   // 모바일 화면 폭이 794px보다 좁아도 폼이 찌그러지지 않도록
   // 캡처 폭/창 폭을 폼 실제 폭(794px)으로 고정한다.
   const targetW = node.scrollWidth || 794;
-  const targetH = node.scrollHeight;
+  const targetH = node.scrollHeight || 1123;
+
+  // iOS Safari는 캔버스 한 변/총 픽셀 한계가 있어, scale:2로 키운 캔버스가 이를 넘으면
+  // toDataURL()이 빈 문자열을 반환하고 jsPDF가 atob하다 "The string did not match
+  // the expected pattern"으로 실패한다(아이폰에서만 PDF 저장 실패).
+  // → 결과 캔버스가 한계 안에 들도록 scale을 동적으로 낮춘다(최대 2).
+  const MAX_SIDE = 4096; // 변 길이 한계(보수적)
+  const MAX_AREA = 16_000_000; // 총 픽셀 한계(~16.7M)
+  const scale = Math.min(
+    2,
+    MAX_SIDE / targetW,
+    MAX_SIDE / targetH,
+    Math.sqrt(MAX_AREA / (targetW * targetH)),
+  );
 
   return html2canvas(node, {
-    scale: 2,
+    scale,
     backgroundColor: "#ffffff",
     useCORS: true,
     logging: false,
