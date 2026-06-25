@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { uploadCapturePublic } from "@/lib/daepyecha/capture";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -104,11 +105,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     .eq("id", params.id);
   if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
 
+  // 수도권 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
+  const captureUrl = hasJpg && variant === "default" ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
+
   // Teams 자동 업로드(이메일 릴레이) — 수정본.
   // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
+  //   수도권은 캡션(첫 줄)+IMG 줄을 넣어 스레드 게시/인라인 이미지가 신규와 동일하게 동작.
+  const caption = variant === "default" ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:
+      caption +
+      (captureUrl ? `IMG:${captureUrl}\n` : "") +
       `${docName} (수정본)\n` +
       `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
       `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
