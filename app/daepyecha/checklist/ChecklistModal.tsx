@@ -170,11 +170,14 @@ export default function ChecklistModal({
       fd.append("jpg", jpg, "checklist.jpg"); // 팀즈 업로드용(수도권)
       fd.append("meta", JSON.stringify(meta));
       // 증빙사진(있는 슬롯만): 압축 후 첨부. 파일명=라벨.jpg → Teams 저장 파일명.
+      let bodyBytes = pdf.size + jpg.size; // 전송 용량 추적(Vercel 4.5MB 한계 점검)
       for (const s of photos) {
         if (s.na || !s.file) continue;
         const blob = await compressImage(s.file);
+        bodyBytes += blob.size;
         fd.append("photos", blob, `${s.label}.jpg`);
       }
+      const mb = (bodyBytes / (1024 * 1024)).toFixed(1);
       let res: Response;
       try {
         res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
@@ -182,10 +185,17 @@ export default function ChecklistModal({
           body: fd,
         });
       } catch (e) {
-        throw new Error(`[업로드] ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`[업로드 ${mb}MB] ${e instanceof Error ? e.message : String(e)}`);
       }
-      const json = await res.json();
-      if (!res.ok) throw new Error(`[서버] ${json.error ?? "저장 실패"}`);
+      // 서버가 비-JSON(413/504 등 플랫폼 오류)을 줄 수 있어 text로 먼저 받고 안전 파싱.
+      const text = await res.text();
+      let json: { error?: string; id?: string } = {};
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`[서버 ${res.status}, ${mb}MB] 응답이 JSON이 아님: ${text.slice(0, 80) || "(빈 응답)"}`);
+      }
+      if (!res.ok) throw new Error(`[서버 ${res.status}] ${json.error ?? "저장 실패"}`);
       if (!isEdit) {
         try {
           window.localStorage.removeItem(DRAFT_KEY); // 저장 성공 → 임시본 정리
