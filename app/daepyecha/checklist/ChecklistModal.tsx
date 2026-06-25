@@ -26,6 +26,9 @@ import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
 
+// 배포 코드 식별용 빌드 태그(아이폰이 새 번들을 받았는지 화면에서 확인). 수정 때마다 올림.
+const BUILD_TAG = "pdf-diag-1";
+
 function todayStr() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -409,6 +412,8 @@ export default function ChecklistModal({
 
               {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
+              {/* 배포 버전 확인용(아이폰 캐시 점검). 새 코드가 떴는지 이 표시로 확인. */}
+              <p className="text-center text-[10px] text-slate-300">build {BUILD_TAG}</p>
               <div className="flex gap-2 pb-1">
                 <button onClick={onClose} disabled={saving} className="h-12 flex-1 rounded-xl border border-slate-300 font-bold text-slate-600 disabled:opacity-50">취소</button>
                 <button onClick={save} disabled={saving} className="h-12 flex-[2] rounded-xl bg-brand-600 font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "저장 (PDF 보관)"}</button>
