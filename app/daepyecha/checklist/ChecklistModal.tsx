@@ -78,7 +78,8 @@ export default function ChecklistModal({
         if (!alive) return;
         setData({ ...emptyCkForm(todayStr()), ...r.data }); // 기존 서명 유지
       } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "불러오기 실패");
+        const name = (e as { name?: string })?.name ?? "?";
+        if (alive) setError(`[불러오기:${name}] ${e instanceof Error ? e.message : String(e)}`);
       } finally {
         if (alive) setLoading(false);
       }
@@ -144,7 +145,8 @@ export default function ChecklistModal({
       if (!res.ok) throw new Error(`[서버] ${json.error ?? "저장 실패"}`);
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장 중 오류");
+      const name = (e as { name?: string })?.name ?? "?";
+      setError(`[저장:${name}] ${e instanceof Error ? e.message : String(e)}`);
       setSaving(false);
     }
   }
