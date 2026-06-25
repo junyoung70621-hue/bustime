@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
-import { generatePdfAndJpg, PDF_BUILD } from "@/lib/daepyecha/pdf";
+import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import { emptyPhotoSlots, compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
 import PhotoStep from "./PhotoStep";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
@@ -25,10 +25,6 @@ function checkKeyModel(d: CkFormState): string {
 import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
-
-// 배포 코드 식별용 빌드 태그(아이폰이 새 번들을 받았는지 화면에서 확인).
-// pdf.ts에서 가져와 pdf 청크 신선도까지 함께 확인.
-const BUILD_TAG = PDF_BUILD;
 
 // 신규 작성 임시저장 키(브라우저 localStorage). 사진은 파일이라 미포함.
 const DRAFT_KEY = "checklist-draft-v1";
@@ -95,8 +91,7 @@ export default function ChecklistModal({
         if (!alive) return;
         setData({ ...emptyCkForm(todayStr()), ...r.data }); // 기존 서명 유지
       } catch (e) {
-        const name = (e as { name?: string })?.name ?? "?";
-        if (alive) setError(`[불러오기:${name}] ${e instanceof Error ? e.message : String(e)}`);
+        if (alive) setError(e instanceof Error ? e.message : "불러오기 실패");
       } finally {
         if (alive) setLoading(false);
       }
@@ -217,8 +212,7 @@ export default function ChecklistModal({
       }
       onSaved();
     } catch (e) {
-      const name = (e as { name?: string })?.name ?? "?";
-      setError(`[저장:${name}] ${e instanceof Error ? e.message : String(e)}`);
+      setError(e instanceof Error ? e.message : "저장 중 오류");
       setSaving(false);
     }
   }
@@ -497,8 +491,6 @@ export default function ChecklistModal({
 
               {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-              {/* 배포 버전 확인용(아이폰 캐시 점검). 새 코드가 떴는지 이 표시로 확인. */}
-              <p className="text-center text-[10px] text-slate-300">build {BUILD_TAG}</p>
               {!isEdit && (
                 <button
                   type="button"

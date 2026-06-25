@@ -6,9 +6,6 @@
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
-// 이 상수가 화면에 새 값으로 보이면 pdf.ts 청크도 최신(아이폰 캐시 점검용).
-export const PDF_BUILD = "pdf-diag-5";
-
 // 폼 노드를 주어진 scale로 캔버스 래스터화(한글 웹폰트 로드 완료 후 캡처)
 async function rasterizeAt(node: HTMLElement, scale: number): Promise<HTMLCanvasElement> {
   // 모바일 화면 폭이 좁아도 폼이 찌그러지지 않도록 캡처 폭/창 폭을 폼 실제 폭으로 고정.
