@@ -7,12 +7,13 @@ import type { RegFormState, RegModel, Region } from "./types";
 export { REG_MODELS, REG_MODELS_DATA } from "./models.generated";
 export type { RegModel, RegModelDef } from "./models.generated";
 
-export const REGIONS: Region[] = ["대전", "세종", "경북", "제주", "포항", "안동", "김해"];
+export const REGIONS: Region[] = ["대전", "세종", "계룡", "경북", "제주", "포항", "안동", "김해"];
 
 // Storage 키(ASCII)용 지역 코드
 export const REGION_CODE: Record<string, string> = {
   대전: "daejeon",
   세종: "sejong",
+  계룡: "gyeryong",
   경북: "gyeongbuk",
   제주: "jeju",
   포항: "pohang",

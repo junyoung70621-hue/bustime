@@ -7,7 +7,7 @@ import type { OX } from "@/lib/checklist/types";
 import type { RegModel } from "./models.generated";
 
 export type { RegModel } from "./models.generated";
-export type Region = "대전" | "세종" | "경북" | "제주" | "포항" | "안동" | "김해";
+export type Region = "대전" | "세종" | "계룡" | "경북" | "제주" | "포항" | "안동" | "김해";
 
 /** 작성/수정 폼 전체 상태 */
 export type RegFormState = {
