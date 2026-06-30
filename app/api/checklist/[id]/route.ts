@@ -65,7 +65,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (curErr || !cur) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
 
   const bytes = new Uint8Array(await pdf.arrayBuffer());
-  const up = await sb!.storage.from(BUCKET).upload(cur.pdf_path, bytes, { contentType: "application/pdf", upsert: true });
+  // 같은 경로 덮어쓰기(upsert)는 스토리지/CDN 캐시가 옛 PDF를 계속 제공해 수정이 반영 안 됨.
+  // → 매 수정마다 새 경로로 올리고 옛 파일을 지운다(캐시 충돌 원천 차단).
+  const dir = cur.pdf_path.split("/").slice(0, -1).join("/");
+  const newPath = `${dir ? `${dir}/` : ""}${params.id}-${crypto.randomUUID().slice(0, 8)}.pdf`;
+  const up = await sb!.storage.from(BUCKET).upload(newPath, bytes, { contentType: "application/pdf", upsert: false });
   if (up.error) return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
 
   // 팀즈 업로드 메타/파일명 — 갱신 후 DB에 보관.
@@ -98,12 +102,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       installer_name: meta.installer_name ?? "",
       operator_signer_name: meta.operator_signer_name ?? "",
       data: meta.data ?? {},
+      pdf_path: newPath,
       teams_file: relayName,
       modified_by: String(meta.modified_by).trim(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", params.id);
-  if (error) return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+  if (error) {
+    // DB 갱신 실패 시 새로 올린 파일은 고아 → 정리하고 옛 파일/경로 유지.
+    await sb!.storage.from(BUCKET).remove([newPath]);
+    return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+  }
+  // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
+  if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
 
   // 수도권 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
   const captureUrl = hasJpg && variant === "default" ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
