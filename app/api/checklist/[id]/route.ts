@@ -10,6 +10,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 import { uploadCapturePublic, CAPTURE_BUCKET } from "@/lib/daepyecha/capture";
+import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -138,6 +139,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     action: "updated",
     replaceFile: cur.teams_file ?? undefined,
   });
+
+  // 증빙사진 재첨부(수도권 전용) — 수정 시 사진을 다시 올린 경우에만 동작.
+  if (variant === "default") {
+    await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+      center,
+      operator,
+      vehicleNo: vehNo,
+      installDate,
+    });
+  }
 
   return NextResponse.json({ id: params.id });
 }

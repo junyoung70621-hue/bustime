@@ -9,8 +9,9 @@ import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
-import { sendRelayMail, sendPhotoRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 import { uploadCapturePublic } from "@/lib/daepyecha/capture";
+import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
@@ -159,15 +160,15 @@ export async function POST(req: NextRequest) {
     action: "created",
   });
 
-  // 증빙사진 릴레이(수도권 전용) — 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장.
+  // 증빙사진 릴레이(수도권 전용) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
+  // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.
   if (variant === "default") {
-    const photoFiles = form.getAll("photos").filter((f): f is File => f instanceof File);
-    if (photoFiles.length > 0) {
-      const photos = await Promise.all(
-        photoFiles.map(async (f) => ({ filename: f.name, bytes: new Uint8Array(await f.arrayBuffer()) })),
-      );
-      await sendPhotoRelayMail({ center, operator, vehicleNo: vehNo, installDate, photos });
-    }
+    await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+      center,
+      operator,
+      vehicleNo: vehNo,
+      installDate,
+    });
   }
 
   return NextResponse.json({ id: data.id });

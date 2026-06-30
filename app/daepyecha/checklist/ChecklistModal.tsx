@@ -8,7 +8,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
 import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
-import { emptyPhotoSlots, compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
+import { emptyPhotoSlots, uploadPhotosDirect, type PhotoSlot } from "@/lib/daepyecha/photo";
+import type { PhotoRef } from "@/lib/daepyecha/photo-upload";
 import PhotoStep from "./PhotoStep";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
@@ -149,6 +150,13 @@ export default function ChecklistModal({
     setSaving(true);
     try {
       const { pdf, jpg } = await generatePdfAndJpg(captureRef.current);
+
+      // 증빙사진(수도권)은 Storage에 직접 업로드 → Vercel 함수 본문(~4.5MB)을 우회.
+      //   본문에는 사진 참조(path)만 실어 413을 원천 차단한다. 서버가 릴레이 후 임시본 삭제.
+      const slots = photos.filter((s) => !s.na && s.file).map((s) => ({ label: s.label, file: s.file! }));
+      let photoRefs: PhotoRef[] = [];
+      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, crypto.randomUUID());
+
       const meta = {
         center: data.center,
         operator: data.tagless ? `(태그리스)${data.operatorName}` : data.operatorName,
@@ -158,6 +166,7 @@ export default function ChecklistModal({
         installer_name: data.installerName,
         operator_signer_name: data.operatorSignerName,
         data, // 서명 포함 저장(수정 시 유지)
+        ...(photoRefs.length ? { photos_upload: photoRefs } : {}),
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };
       const metaStr = JSON.stringify(meta);
@@ -165,26 +174,8 @@ export default function ChecklistModal({
       fd.append("pdf", pdf, "checklist.pdf");
       fd.append("jpg", jpg, "checklist.jpg"); // 팀즈 업로드용(수도권)
       fd.append("meta", metaStr);
-      // 증빙사진은 Vercel 함수 본문 한계(~4.5MB) 안에 들도록 예산에 맞춰 적응 압축.
-      // pdf+jpg+meta가 고정 비용(base)이고, 남는 예산에 사진을 맞춰 화질을 단계적으로 낮춘다.
-      const BUDGET = 4.2 * 1024 * 1024; // 4.5MB보다 보수적
-      const base = pdf.size + jpg.size + metaStr.length;
-      const slots = photos.filter((s) => !s.na && s.file);
-      const LADDER: [number, number][] = [[1280, 0.6], [1024, 0.5], [820, 0.45], [640, 0.4]];
-      let photoBlobs: { label: string; blob: Blob }[] = [];
-      for (const [dim, q] of LADDER) {
-        photoBlobs = [];
-        for (const s of slots) photoBlobs.push({ label: s.label, blob: await compressImage(s.file!, dim, q) });
-        const total = base + photoBlobs.reduce((a, p) => a + p.blob.size, 0);
-        if (total <= BUDGET || slots.length === 0) break;
-      }
-      for (const p of photoBlobs) fd.append("photos", p.blob, `${p.label}.jpg`);
-      const bodyBytes = base + photoBlobs.reduce((a, p) => a + p.blob.size, 0);
-      const mb = (bodyBytes / (1024 * 1024)).toFixed(1);
-      // 그래도 한계를 넘으면 업로드 전에 명확히 안내(413으로 죽지 않게).
-      if (bodyBytes > 4.4 * 1024 * 1024) {
-        throw new Error(`[용량 ${mb}MB] 사진 용량이 너무 큽니다. 사진 수를 줄이거나 '없음' 처리 후 다시 시도해 주세요.`);
-      }
+      // 본문은 이제 pdf+jpg+meta(서명 포함)뿐 — 진단용 용량만 계산(아래 에러 메시지에 사용).
+      const mb = ((pdf.size + jpg.size + metaStr.length) / (1024 * 1024)).toFixed(1);
       let res: Response;
       try {
         res = await fetch(isEdit ? `/api/checklist/${editId}` : "/api/checklist", {
