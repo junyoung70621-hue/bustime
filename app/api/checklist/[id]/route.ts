@@ -117,13 +117,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
   if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
 
-  // 수도권 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
-  const captureUrl = hasJpg && variant === "default" ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
+  // 수도권/인천 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
+  const inlineThread = variant === "default" || variant === "incheon";
+  const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
 
   // Teams 자동 업로드(이메일 릴레이) — 수정본.
   // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
-  //   수도권은 캡션(첫 줄)+IMG 줄을 넣어 스레드 게시/인라인 이미지가 신규와 동일하게 동작.
-  const caption = variant === "default" ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
+  //   수도권/인천은 캡션(첫 줄)+IMG 줄을 넣어 스레드 게시/인라인 이미지가 신규와 동일하게 동작.
+  const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:

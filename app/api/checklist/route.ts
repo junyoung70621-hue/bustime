@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       data: meta.data ?? {},
       pdf_path: path,
       teams_file: relayName,
-      variant: ["regional", "gongyong", "gosi"].includes(String(meta.variant)) ? meta.variant : "default",
+      variant: ["regional", "gongyong", "gosi", "incheon"].includes(String(meta.variant)) ? meta.variant : "default",
     })
     .select("id")
     .single();
@@ -138,13 +138,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
   }
 
-  // 수도권 캡쳐(JPG)를 공개 버킷에 올려 Teams 스레드 인라인 이미지용 공개 URL 확보(실패해도 비차단).
-  const captureUrl = hasJpg && variant === "default" ? await uploadCapturePublic(sb!, id, relayBytes) : "";
+  // 수도권/인천 체크리스트는 캡쳐(JPG)를 공개 버킷에 올려 Teams 스레드 인라인 이미지용 공개 URL 확보(실패해도 비차단).
+  const inlineThread = variant === "default" || variant === "incheon";
+  const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, id, relayBytes) : "";
 
   // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
-  // 수도권 체크리스트(variant=default)는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
+  // 수도권/인천 체크리스트는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
   //   둘째 줄 "IMG:<공개URL>" → 플로우 B가 추출해 <img>로 인라인 게시.
-  const caption = variant === "default" ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
+  const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
   await sendRelayMail({
     subject: `대폐차|${center}|${operator}|${installDate}`,
     text:

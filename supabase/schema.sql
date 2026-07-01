@@ -125,7 +125,7 @@ create table if not exists public.checklist_confirmations (
   operator_signer_name text not null default '', -- 운수사 담당자 정자
   data                 jsonb not null default '{}'::jsonb, -- 폼 전체 스냅샷(서명 제외)
   pdf_path             text not null,
-  variant              text not null default 'default', -- 'default'(서울) | 'regional'(대전·세종)
+  variant              text not null default 'default', -- 'default'(서울) | 'regional'(대전·세종) | 'incheon'(인천 B820)
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
   modified_by          text not null default '',
