@@ -95,7 +95,7 @@ export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, Item
   B600: {
     "대폐차": [
       { name: "운전자 전원 케이블 ( 6M)", bigo: "운전자 전원공급용", hasNewReused: false },
-      { name: "승차 통신 케이블 (    M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
+      { name: "승차 통신 케이블 (6M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
       { name: "하차 통신 케이블 (16M)", bigo: "운전자 -> 하차 전원통신용", hasNewReused: false },
       { name: "LTE 모뎀 통신 케이블 (6M)", bigo: "운전자 -> LTE모뎀 통신용", hasNewReused: false },
       { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
@@ -108,7 +108,7 @@ export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, Item
     ],
     "증차": [
       { name: "운전자 전원 케이블 ( 6M)", bigo: "운전자 전원공급용", hasNewReused: false },
-      { name: "승차 통신 케이블 (    M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
+      { name: "승차 통신 케이블 (6M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
       { name: "하차 통신 케이블 (16M)", bigo: "운전자 -> 하차 전원통신용", hasNewReused: false },
       { name: "LTE 모뎀 통신 케이블 (6M)", bigo: "운전자 -> LTE모뎀 통신용", hasNewReused: false },
       { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },

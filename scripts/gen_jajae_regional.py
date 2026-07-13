@@ -21,6 +21,10 @@ MODELS = ["B400", "B500", "B600", "B650"]
 #   - "3S 앰프": B400 증차 시트에 있으나 제외(증차도 대폐차와 동일 15품목).
 EXCLUDE_NAMES = {"3S 앰프"}
 
+# 엑셀 원본 표기 보정(이름 기준). 사용자 지시 반영.
+#   - B600 김해 "승차 통신 케이블": 원본 길이 공란 → 6M.
+NAME_FIXES = {"승차 통신 케이블 (    M)": "승차 통신 케이블 (6M)"}
+
 
 def norm(v):
     return "" if v is None else str(v).replace("\r\n", "\n").strip()
@@ -46,6 +50,7 @@ def extract(ws):
             continue
         if name in EXCLUDE_NAMES:
             continue
+        name = NAME_FIXES.get(name, name)
         bigo = norm(ws.cell(r, 4).value)  # D열
         if bigo.startswith("*"):
             bigo = bigo[1:].strip()
