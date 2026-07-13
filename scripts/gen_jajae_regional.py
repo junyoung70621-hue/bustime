@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 # ─────────────────────────────────────────────────────────────
-# 대전·세종 자재 지급확인서 엑셀 → lib/daepyecha-regional/items.generated.ts
-#   시트 6개: B400/B500/B650 × (대폐차 / 증차). 각 시트 8행~"기타" 직전까지 품목.
+# 지역 자재 지급확인서 엑셀 → lib/daepyecha-regional/items.generated.ts
+#   원본 2개: 대전·세종(B400/B500/B650) + 김해(B600). 시트당 모델×(대폐차/증차).
+#   각 시트 헤더(NO) 다음 행~"기타" 직전까지 품목.
 #   name=B열, bigo=D열("* " 제거), hasNewReused = bigo에 "(신규" 포함. 기본수량=대당 1.
-#   재생성: python scripts/gen_jajae_regional.py [xlsx경로]
+#   재생성: python scripts/gen_jajae_regional.py [xlsx경로...]
 # ─────────────────────────────────────────────────────────────
 import sys, os, json
 import openpyxl
 
-DEFAULT_XLSX = os.path.expanduser(r"~/Downloads/자재지급확인서_양식_대전_세종 (1).xlsx")
-XLSX = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_XLSX
+DEFAULT_XLSXS = [
+    os.path.expanduser(r"~/Downloads/자재지급확인서_양식_대전_세종 (1).xlsx"),
+    os.path.expanduser(r"~/Downloads/B600 설치 자재 지급확인서(김해).xlsx"),
+]
+XLSXS = sys.argv[1:] if len(sys.argv) > 1 else DEFAULT_XLSXS
 
-MODELS = ["B400", "B500", "B650"]
+MODELS = ["B400", "B500", "B600", "B650"]
 
 # 엑셀엔 있으나 실제 양식에서 제외하는 품목(이름 기준). 사용자 지시 반영.
 #   - "3S 앰프": B400 증차 시트에 있으나 제외(증차도 대폐차와 동일 15품목).
@@ -51,25 +55,26 @@ def extract(ws):
 
 
 def main():
-    wb = openpyxl.load_workbook(XLSX, data_only=True)
     data = {m: {} for m in MODELS}
-    for ws in wb.worksheets:
-        model, purpose, items = extract(ws)
-        if not model:
-            continue
-        data[model][purpose] = items
+    for xlsx in XLSXS:
+        wb = openpyxl.load_workbook(xlsx, data_only=True)
+        for ws in wb.worksheets:
+            model, purpose, items = extract(ws)
+            if not model:
+                continue
+            data[model][purpose] = items
 
     out = []
     out.append("// ─────────────────────────────────────────────────────────────")
-    out.append("// [자동 생성] 대전·세종 자재 지급확인서 모델×용도별 품목")
+    out.append("// [자동 생성] 지역 자재 지급확인서 모델×용도별 품목")
     out.append("//   생성: python scripts/gen_jajae_regional.py")
-    out.append("//   원본: 자재지급확인서_양식_대전_세종 (1).xlsx")
+    out.append("//   원본: 자재지급확인서_양식_대전_세종 (1).xlsx + B600 설치 자재 지급확인서(김해).xlsx")
     out.append("// ─────────────────────────────────────────────────────────────")
     out.append('import type { ItemTemplate } from "@/lib/daepyecha/types";')
     out.append("")
-    out.append('export type RegJajaeModel = "B400" | "B500" | "B650";')
+    out.append("export type RegJajaeModel = " + " | ".join(json.dumps(m) for m in MODELS) + ";")
     out.append('export type RegJajaePurpose = "대폐차" | "증차";')
-    out.append('export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B400", "B500", "B650"];')
+    out.append("export const REG_JAJAE_MODELS: RegJajaeModel[] = [" + ", ".join(json.dumps(m) for m in MODELS) + "];")
     out.append("")
     out.append("export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, ItemTemplate[]>> = {")
     for m in MODELS:

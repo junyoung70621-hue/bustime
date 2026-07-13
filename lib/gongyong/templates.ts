@@ -17,7 +17,7 @@ export const POHANG_COMPANIES: PohangCompany[] = [
   { company: "㈜금아여행", office: "", address: "경북 포항 남구 희망대로659번길 40", phone: "054-272-6671" },
 ];
 
-// 지역별 운수사 목록(운수사 선택 시 주소/전화 자동입력). 출처: 대전·계룡·세종 버스인가대수 자료.
+// 지역별 운수사 목록(운수사 선택 시 주소/전화 자동입력). 대전·계룡·세종: 버스인가대수 자료 / 김해: 전체 동일 주소.
 export type RegionCompany = { name: string; address: string; phone: string };
 export const REGION_COMPANIES: Record<string, RegionCompany[]> = {
   대전: [
@@ -49,6 +49,11 @@ export const REGION_COMPANIES: Record<string, RegionCompany[]> = {
     { name: "㈜세종제일운수", address: "세종시 갈매로 1008(누리동194-24)", phone: "044-868-7701" },
     { name: "㈜세종제일운수(M버스)", address: "세종시 갈매로 1008(누리동194-24)", phone: "044-868-7701" },
     { name: "오토노머스에이투지", address: "세종시 집현중앙7로3 산학연클러스터지원센터 406호", phone: "0507-1315-4630" },
+  ],
+  김해: [
+    { name: "가야IBS", address: "김해시 골든루트로 66번길 143", phone: "055-333-2256" },
+    { name: "동부교통", address: "김해시 골든루트로 66번길 143", phone: "055-325-3530" },
+    { name: "김해BUS", address: "김해시 골든루트로 66번길 143", phone: "070-7602-0061" },
   ],
 };
 

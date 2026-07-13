@@ -1,13 +1,13 @@
 // ─────────────────────────────────────────────────────────────
-// [자동 생성] 대전·세종 자재 지급확인서 모델×용도별 품목
+// [자동 생성] 지역 자재 지급확인서 모델×용도별 품목
 //   생성: python scripts/gen_jajae_regional.py
-//   원본: 자재지급확인서_양식_대전_세종 (1).xlsx
+//   원본: 자재지급확인서_양식_대전_세종 (1).xlsx + B600 설치 자재 지급확인서(김해).xlsx
 // ─────────────────────────────────────────────────────────────
 import type { ItemTemplate } from "@/lib/daepyecha/types";
 
-export type RegJajaeModel = "B400" | "B500" | "B650";
+export type RegJajaeModel = "B400" | "B500" | "B600" | "B650";
 export type RegJajaePurpose = "대폐차" | "증차";
-export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B400", "B500", "B650"];
+export const REG_JAJAE_MODELS: RegJajaeModel[] = ["B400", "B500", "B600", "B650"];
 
 export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, ItemTemplate[]>> = {
   B400: {
@@ -84,6 +84,34 @@ export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, Item
       { name: "SMPS", bigo: "차량메인전원 -> 운전자 전원공급용", hasNewReused: false },
       { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
       { name: "GPS 브라켓", bigo: "GPS 안테나 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+  },
+  B600: {
+    "대폐차": [
+      { name: "운전자 전원 케이블 ( 6M)", bigo: "운전자 전원공급용", hasNewReused: false },
+      { name: "승차 통신 케이블 (    M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
+      { name: "하차 통신 케이블 (16M)", bigo: "운전자 -> 하차 전원통신용", hasNewReused: false },
+      { name: "LTE 모뎀 통신 케이블 (6M)", bigo: "운전자 -> LTE모뎀 통신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차ㄷ봉 (소켓 포함)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 브라켓 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+      { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
+    ],
+    "증차": [
+      { name: "운전자 전원 케이블 ( 6M)", bigo: "운전자 전원공급용", hasNewReused: false },
+      { name: "승차 통신 케이블 (    M)", bigo: "운전자 -> 승차 전원통신용", hasNewReused: false },
+      { name: "하차 통신 케이블 (16M)", bigo: "운전자 -> 하차 전원통신용", hasNewReused: false },
+      { name: "LTE 모뎀 통신 케이블 (6M)", bigo: "운전자 -> LTE모뎀 통신용", hasNewReused: false },
+      { name: "GPS ANT", bigo: "GPS 안테나 수신용 (신규 , 재활용)", hasNewReused: true },
       { name: "운전자봉 (U형 , ㄱ형)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
       { name: "운전자 브라켓 (U형 포함)", bigo: "운전자 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
       { name: "운전자 블랙커버", bigo: "운전자 백커버 (신규 , 재활용)", hasNewReused: true },

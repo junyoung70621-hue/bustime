@@ -1,9 +1,9 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// 대전·세종 자재 지급확인서 작성/수정 모달 (수도권과 동일 방식)
+// 지역 자재 지급확인서 작성/수정 모달 (수도권과 동일 방식)
 //   step1(기본정보+품목) → step2(서명/미리보기) → 저장(PDF→Storage+DB, variant=regional)
-//   모델 B500/B650 × 용도(대폐차/증차) 에 따라 품목 자동 구성. 태그리스 없음.
+//   모델 B400/B500/B600/B650 × 용도(대폐차/증차) 에 따라 품목 자동 구성. 태그리스 없음.
 //   ConfirmationForm·SignaturePad 는 기존 daepyecha 컴포넌트 재사용.
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
@@ -16,7 +16,7 @@ import { itemVariants, firstUnselectedVariant } from "@/lib/daepyecha/templates"
 import ConfirmationForm from "@/app/daepyecha/ConfirmationForm";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 
-// FormState 와 동일하되 model=지역 기종(B500/B650), center=지역(대전/세종 등)
+// FormState 와 동일하되 model=지역 기종(B400/B500/B600/B650), center=지역(대전/세종/김해 등)
 type RegForm = Omit<FormState, "model" | "center"> & { model: RegJajaeModel | ""; center: Region | "" };
 
 const OFFICE_TYPES: OfficeType[] = ["본사", "영업소"];
