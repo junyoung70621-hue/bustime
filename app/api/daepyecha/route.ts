@@ -6,7 +6,7 @@
 // 쓰기는 service_role 키로만 처리(서버 전용, 키 비노출).
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, orIlike } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
 
   if (center) query = query.eq("center", center);
-  if (q) query = query.or(`operator.ilike.%${q}%,vehicle_numbers.ilike.%${q}%`);
+  if (q) query = query.or(`operator.ilike.${orIlike(q)},vehicle_numbers.ilike.${orIlike(q)}`);
   if (from) query = query.gte("issued_date", from);
   if (to) query = query.lte("issued_date", to);
 

@@ -5,7 +5,7 @@
 //   검색(운수사/차량) + 기간(점검일) + 지역 필터 + 선택 ZIP + 수정 + 휴지통
 //   백엔드는 기존 /api/checklist 공유(variant=regional 로 분리).
 // ─────────────────────────────────────────────────────────────
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { REGIONS } from "@/lib/checklist-regional/templates";
 import type { RegRow, Region } from "@/lib/checklist-regional/types";
 import RegionalChecklistModal from "./RegionalChecklistModal";
@@ -24,7 +24,9 @@ export default function RegionalChecklistList() {
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | "new" | string>(null);
 
+  const loadSeq = useRef(0); // 검색 연타 시 응답 역전 방지 — 최신 요청만 반영
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setSelected(new Set());
     try {
@@ -37,11 +39,12 @@ export default function RegionalChecklistList() {
       if (trashed) p.set("trashed", "1");
       const res = await fetch(`/api/checklist?${p.toString()}`);
       const json = await res.json();
+      if (seq !== loadSeq.current) return; // 더 최신 요청이 이미 나감
       setRows(json.rows ?? []);
     } catch {
-      setRows([]);
+      if (seq === loadSeq.current) setRows([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [filter, q, from, to, trashed]);
 
@@ -145,7 +148,7 @@ export default function RegionalChecklistList() {
         </div>
         <div className="flex items-center gap-2">
           {trashed && rows.length > 0 && (
-            <button onClick={() => act("/api/checklist/trash", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">
+            <button onClick={() => act("/api/checklist/trash?variant=regional", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">
               비우기
             </button>
           )}
@@ -178,7 +181,7 @@ export default function RegionalChecklistList() {
                   </p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     점검자 {r.installer_name || "-"}
-                    {r.modified_by ? ` · 수정 ${r.modified_by}(${(r.updated_at || "").slice(0, 10)})` : ""}
+                    {r.modified_by ? ` · 수정 ${r.modified_by}(${r.updated_at ? new Date(r.updated_at).toLocaleDateString("sv-SE") : ""})` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

@@ -6,7 +6,7 @@
 //   - 체크 선택 → 여러 건 ZIP 다운로드
 //   - 수정(편집 모달), 삭제(휴지통), 휴지통 보기/복원/영구삭제/비우기
 // ─────────────────────────────────────────────────────────────
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CENTERS } from "@/lib/daepyecha/templates";
 import type { ConfirmationRow, Center } from "@/lib/daepyecha/types";
 import DaepyechaModal from "./DaepyechaModal";
@@ -27,7 +27,9 @@ export default function DaepyechaList() {
   // modal: null=닫힘, "new"=신규, 그 외=수정할 id
   const [modal, setModal] = useState<null | "new" | string>(null);
 
+  const loadSeq = useRef(0); // 검색 연타 시 응답 역전 방지 — 최신 요청만 반영
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setSelected(new Set());
     try {
@@ -39,11 +41,12 @@ export default function DaepyechaList() {
       if (trashed) p.set("trashed", "1");
       const res = await fetch(`/api/daepyecha?${p.toString()}`);
       const json = await res.json();
+      if (seq !== loadSeq.current) return; // 더 최신 요청이 이미 나감
       setRows(json.rows ?? []);
     } catch {
-      setRows([]);
+      if (seq === loadSeq.current) setRows([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [filter, q, from, to, trashed]);
 
@@ -105,7 +108,7 @@ export default function DaepyechaList() {
   }
   async function emptyTrash() {
     if (!confirm("휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")) return;
-    await act(`/api/daepyecha/trash`, "DELETE");
+    await act(`/api/daepyecha/trash?variant=default`, "DELETE");
   }
   async function act(url: string, method: string) {
     setBusy(true);

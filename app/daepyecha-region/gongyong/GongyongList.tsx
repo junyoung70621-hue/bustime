@@ -4,7 +4,7 @@
 // 공용 설치확인서 관리 목록
 //   백엔드는 /api/checklist 공유(variant=gongyong). 지역 필터 + 검색 + 휴지통.
 // ─────────────────────────────────────────────────────────────
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { REGIONS } from "@/lib/gongyong/templates";
 import type { GongyongRow } from "@/lib/gongyong/types";
 import type { Region } from "@/lib/checklist-regional/types";
@@ -24,7 +24,9 @@ export default function GongyongList() {
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | "new" | string>(null);
 
+  const loadSeq = useRef(0); // 검색 연타 시 응답 역전 방지 — 최신 요청만 반영
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setSelected(new Set());
     try {
@@ -37,11 +39,12 @@ export default function GongyongList() {
       if (trashed) p.set("trashed", "1");
       const res = await fetch(`/api/checklist?${p.toString()}`);
       const json = await res.json();
+      if (seq !== loadSeq.current) return; // 더 최신 요청이 이미 나감
       setRows(json.rows ?? []);
     } catch {
-      setRows([]);
+      if (seq === loadSeq.current) setRows([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [filter, q, from, to, trashed]);
 
@@ -145,7 +148,7 @@ export default function GongyongList() {
         </div>
         <div className="flex items-center gap-2">
           {trashed && rows.length > 0 && (
-            <button onClick={() => act("/api/checklist/trash", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">비우기</button>
+            <button onClick={() => act("/api/checklist/trash?variant=gongyong", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">비우기</button>
           )}
           <button onClick={() => setTrashed((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${trashed ? "bg-slate-800 text-white ring-slate-800" : "bg-white text-slate-500 ring-slate-200"}`}>
             {trashed ? "← 목록" : "🗑 휴지통"}
@@ -174,7 +177,7 @@ export default function GongyongList() {
                   <p className="mt-1 text-xs text-slate-500">{r.vehicle_numbers ? `${r.vehicle_numbers} · ` : ""}설치확인일 {r.install_date || "-"}</p>
                   <p className="mt-0.5 text-xs text-slate-400">
                     운수사 {r.operator_signer_name || "-"} / 설치자 {r.installer_name || "-"}
-                    {r.modified_by ? ` · 수정 ${r.modified_by}(${(r.updated_at || "").slice(0, 10)})` : ""}
+                    {r.modified_by ? ` · 수정 ${r.modified_by}(${r.updated_at ? new Date(r.updated_at).toLocaleDateString("sv-SE") : ""})` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

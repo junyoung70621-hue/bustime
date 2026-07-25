@@ -4,7 +4,7 @@
 // 대전·세종 자재 지급확인서 관리 목록 (수도권 DaepyechaList와 동일 기능)
 //   백엔드는 기존 /api/daepyecha 공유(variant=regional 로 분리). 지역 필터.
 // ─────────────────────────────────────────────────────────────
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { REGIONS } from "@/lib/daepyecha-regional/templates";
 import type { Region } from "@/lib/checklist-regional/types";
 import type { ConfirmationRow } from "@/lib/daepyecha/types";
@@ -24,7 +24,9 @@ export default function RegionalJajaeList() {
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | "new" | string>(null);
 
+  const loadSeq = useRef(0); // 검색 연타 시 응답 역전 방지 — 최신 요청만 반영
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setSelected(new Set());
     try {
@@ -37,11 +39,12 @@ export default function RegionalJajaeList() {
       if (trashed) p.set("trashed", "1");
       const res = await fetch(`/api/daepyecha?${p.toString()}`);
       const json = await res.json();
+      if (seq !== loadSeq.current) return; // 더 최신 요청이 이미 나감
       setRows(json.rows ?? []);
     } catch {
-      setRows([]);
+      if (seq === loadSeq.current) setRows([]);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [filter, q, from, to, trashed]);
 
@@ -146,7 +149,7 @@ export default function RegionalJajaeList() {
         </div>
         <div className="flex items-center gap-2">
           {trashed && rows.length > 0 && (
-            <button onClick={() => act("/api/daepyecha/trash", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 ring-1 ring-red-200">휴지통 비우기</button>
+            <button onClick={() => act("/api/daepyecha/trash?variant=regional", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 ring-1 ring-red-200">휴지통 비우기</button>
           )}
           <button onClick={() => setTrashed((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${trashed ? "bg-slate-700 text-white ring-slate-700" : "bg-white text-slate-500 ring-slate-200"}`}>
             {trashed ? "← 목록으로" : "🗑 휴지통"}

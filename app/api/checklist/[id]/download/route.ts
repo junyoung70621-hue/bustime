@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const sb = getSupabase();
   const { data, error } = await sb
     .from("checklist_confirmations")
-    .select("pdf_path, operator, install_date")
+    .select("pdf_path, operator, install_date, variant, teams_file")
     .eq("id", params.id)
     .single();
   if (error || !data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -24,7 +24,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "다운로드 비활성: SERVICE_ROLE_KEY 없음" }, { status: 503 });
   }
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
-  const filename = `${safe(data.operator || "체크리스트")} 설치완료체크리스트_${data.install_date || ""}`.trim() + ".pdf";
+  // 공용/고시 탭은 설치확인서 계열 문서 — 팀즈 파일명 첫 단어(설치확인서/철수확인서 등)를 라벨로 사용.
+  const isConfirmDoc = data.variant === "gongyong" || data.variant === "gosi";
+  const label = isConfirmDoc ? (data.teams_file || "").split(" ")[0] || "설치확인서" : "설치완료체크리스트";
+  const filename = `${safe(data.operator || "체크리스트")} ${label}_${data.install_date || ""}`.trim() + ".pdf";
 
   // 파일 바이트를 직접 받아 우리 응답으로 스트리밍한다.
   // (Supabase signed URL 의 download 옵션은 한글 파일명을 %EC… 로 깨뜨림)

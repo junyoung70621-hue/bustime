@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rows, error } = await sb
     .from("checklist_confirmations")
-    .select("id, operator, install_date, pdf_path")
+    .select("id, operator, install_date, pdf_path, variant, teams_file")
     .in("id", ids);
   if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
   if (!rows || rows.length === 0) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
@@ -39,9 +39,13 @@ export async function POST(req: NextRequest) {
     const dl = await sb.storage.from(BUCKET).download(r.pdf_path);
     if (dl.error || !dl.data) continue;
     const buf = new Uint8Array(await dl.data.arrayBuffer());
-    let name = `${safe(r.operator || "체크리스트")} 설치완료체크리스트_${r.install_date || ""}`.trim() + ".pdf";
+    // 공용/고시 탭은 설치확인서 계열 문서 — 팀즈 파일명 첫 단어(설치확인서/철수확인서 등)를 라벨로 사용.
+    const isConfirmDoc = r.variant === "gongyong" || r.variant === "gosi";
+    const label = isConfirmDoc ? (r.teams_file || "").split(" ")[0] || "설치확인서" : "설치완료체크리스트";
+    const base = `${safe(r.operator || "체크리스트")} ${label}_${r.install_date || ""}`.trim();
+    let name = `${base}.pdf`;
     let n = 2;
-    while (used.has(name)) name = `${safe(r.operator || "체크리스트")} 설치완료체크리스트_${r.install_date || ""} (${n++}).pdf`;
+    while (used.has(name)) name = `${base} (${n++}).pdf`;
     used.add(name);
     zip.file(name, buf);
   }

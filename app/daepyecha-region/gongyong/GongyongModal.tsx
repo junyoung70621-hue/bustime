@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { parseJsonRes } from "@/lib/fetchJson";
 import { REGIONS, GONGYONG_BUS_TYPES, MAX_VEHICLES, POHANG_COMPANIES, REGION_COMPANIES, emptyVehicle, emptyGongyongForm } from "@/lib/gongyong/templates";
 import type { GongyongForm, GongyongRow, GongyongBusType, GongyongDocType, GongyongInstallType, GongyongOffice, GongyongVehicle } from "@/lib/gongyong/types";
 import type { Region } from "@/lib/checklist-regional/types";
@@ -124,7 +125,7 @@ export default function GongyongModal({
         method: isEdit ? "PUT" : "POST",
         body: fd,
       });
-      const json = await res.json();
+      const json = await parseJsonRes(res);
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
       onSaved();
     } catch (e) {

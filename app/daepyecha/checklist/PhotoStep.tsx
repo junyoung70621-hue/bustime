@@ -78,7 +78,10 @@ export default function PhotoStep({
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => setFile(i, e.target.files?.[0] ?? null)}
+                    onChange={(e) => {
+                      setFile(i, e.target.files?.[0] ?? null);
+                      e.target.value = ""; // 같은 파일 재선택도 change가 발생하도록 리셋
+                    }}
                   />
                 </label>
               </div>
@@ -90,7 +93,10 @@ export default function PhotoStep({
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => setFile(i, e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    setFile(i, e.target.files?.[0] ?? null);
+                    e.target.value = ""; // 같은 파일 재선택도 change가 발생하도록 리셋
+                  }}
                 />
               </label>
             )}

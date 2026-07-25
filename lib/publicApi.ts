@@ -29,6 +29,36 @@ export type BusPosition = {
 
 type RawItem = Record<string, string>;
 
+// https/http 동시 발사는 진 쪽 요청도 공공 서버에 도달해 일일 쿼터를 2배로 소모한다.
+// → 순차 시도하되 성공한 프로토콜을 기억해, 다음 호출부터는 그쪽만 사용(쿼터 1배).
+//   (막힌 환경에서 최초 1회만 타임아웃 비용을 치르고 이후엔 바로 폴백 엔드포인트 사용)
+const TIMEOUT_MS = 6000;
+let preferredProto: "https:" | "http:" | null = null;
+
+async function fetchFirst(endpoints: string[], qs: string): Promise<unknown> {
+  const ordered = preferredProto
+    ? [...endpoints].sort((a, b) => Number(b.startsWith(preferredProto!)) - Number(a.startsWith(preferredProto!)))
+    : endpoints;
+
+  let lastErr: unknown;
+  for (const base of ordered) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(`${base}?${qs}`, { cache: "no-store", signal: ac.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      preferredProto = base.startsWith("https:") ? "https:" : "http:";
+      return json;
+    } catch (e) {
+      lastErr = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * 노선ID로 실시간 버스 위치 목록을 가져온다.
  * 키 노출 방지를 위해 반드시 서버 측에서만 호출.
@@ -45,26 +75,11 @@ export async function fetchBusPositions(busRouteId: string): Promise<BusPosition
   });
   const qs = params.toString();
 
-  // https/http 동시 요청 → 먼저 성공 응답하는 쪽 채택 (느린 전송 대기 없음)
-  const TIMEOUT_MS = 6000;
-  const fetchOne = async (base: string) => {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(`${base}?${qs}`, { cache: "no-store", signal: ac.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } finally {
-      clearTimeout(timer);
-    }
-  };
-
   let json: any | null = null;
   try {
-    json = await Promise.any(ENDPOINTS.map(fetchOne));
+    json = await fetchFirst(ENDPOINTS, qs);
   } catch (e) {
-    const lastErr = e instanceof AggregateError ? e.errors[e.errors.length - 1] : e;
-    throw new Error(`공공 API 연결 실패(route ${busRouteId}): ${String(lastErr)}`);
+    throw new Error(`공공 API 연결 실패(route ${busRouteId}): ${String(e)}`);
   }
 
   // 정상 헤더 코드는 "0".
@@ -140,25 +155,11 @@ export async function fetchArrivalInfo(
     resultType: "json",
   }).toString();
 
-  const TIMEOUT_MS = 6000;
-  const fetchOne = async (base: string) => {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(`${base}?${qs}`, { cache: "no-store", signal: ac.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } finally {
-      clearTimeout(timer);
-    }
-  };
-
   let json: any | null = null;
   try {
-    json = await Promise.any(ARRIVE_ENDPOINTS.map(fetchOne));
+    json = await fetchFirst(ARRIVE_ENDPOINTS, qs);
   } catch (e) {
-    const lastErr = e instanceof AggregateError ? e.errors[e.errors.length - 1] : e;
-    throw new Error(`도착정보 API 연결 실패(route ${busRouteId}): ${String(lastErr)}`);
+    throw new Error(`도착정보 API 연결 실패(route ${busRouteId}): ${String(e)}`);
   }
 
   const headerCd = String(json?.msgHeader?.headerCd ?? "");

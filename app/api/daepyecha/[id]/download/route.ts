@@ -46,6 +46,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`,
+      // 수정 후 옛 PDF가 브라우저 캐시로 보이지 않게.
+      "Cache-Control": "no-store",
     },
   });
 }

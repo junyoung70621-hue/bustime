@@ -10,7 +10,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const CAPTURE_BUCKET = "captures";
 
 /** 캡쳐 JPG를 공개 버킷에 업로드하고 공개 URL을 반환. 실패 시 "" (저장 비차단).
- *  파일명은 레코드 id 기준이라, 수정 시 같은 경로로 덮어써 최신 캡쳐를 유지한다. */
+ *  파일명은 레코드 id 기준이라, 수정 시 같은 경로로 덮어써 최신 캡쳐를 유지한다.
+ *  (삭제 흐름들이 `${id}.jpg` 고정 경로에 의존 → 경로는 유지하고, 덮어쓰기 시
+ *   CDN이 옛 이미지를 계속 주는 문제는 URL 캐시버스터(?v=)로 회피) */
 export async function uploadCapturePublic(sb: SupabaseClient, id: string, jpg: Uint8Array): Promise<string> {
   try {
     const path = `${id}.jpg`;
@@ -19,7 +21,7 @@ export async function uploadCapturePublic(sb: SupabaseClient, id: string, jpg: U
       console.error("캡쳐 공개 업로드 실패:", up.error.message);
       return "";
     }
-    return sb.storage.from(CAPTURE_BUCKET).getPublicUrl(path).data.publicUrl;
+    return `${sb.storage.from(CAPTURE_BUCKET).getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
   } catch (e) {
     console.error("캡쳐 공개 업로드 예외:", e);
     return "";

@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { parseJsonRes } from "@/lib/fetchJson";
 import { GOSI_PURPOSES, emptyGosiForm } from "@/lib/gosi/templates";
 import type { GosiForm, GosiItem, GosiPurpose, GosiRow } from "@/lib/gosi/types";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
@@ -93,7 +94,7 @@ export default function GosiModal({
         method: isEdit ? "PUT" : "POST",
         body: fd,
       });
-      const json = await res.json();
+      const json = await parseJsonRes(res);
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
       onSaved();
     } catch (e) {

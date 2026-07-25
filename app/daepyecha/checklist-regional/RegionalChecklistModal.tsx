@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { parseJsonRes } from "@/lib/fetchJson";
 import { REG_MODELS, REG_MODELS_DATA, REG_HEADER, REGIONS, regCheckKey, emptyRegForm } from "@/lib/checklist-regional/templates";
 import type { RegFormState, RegModel, RegRow, Region } from "@/lib/checklist-regional/types";
 import type { CkRowDef, OX } from "@/lib/checklist/types";
@@ -103,7 +104,7 @@ export default function RegionalChecklistModal({
         method: isEdit ? "PUT" : "POST",
         body: fd,
       });
-      const json = await res.json();
+      const json = await parseJsonRes(res);
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
       onSaved();
     } catch (e) {
@@ -156,7 +157,7 @@ export default function RegionalChecklistModal({
                   </select>
                 </L>
                 <L t="모델">
-                  <select value={data.model} onChange={(e) => patch({ model: e.target.value as RegModel, checks: {}, vehicleType: "" })} className={inp}>
+                  <select value={data.model} onChange={(e) => patch({ model: e.target.value as RegModel, checks: {}, vehicleType: "", vehicleTypeEtc: "" })} className={inp}>
                     <option value="">선택</option>
                     {REG_MODELS.map((m) => (<option key={m} value={m}>{m}</option>))}
                   </select>

@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { REGIONS, REG_JAJAE_MODELS, regJajaeItemsFor } from "@/lib/daepyecha-regional/templates";
 import type { RegJajaeModel, RegJajaePurpose } from "@/lib/daepyecha-regional/templates";
 import { generatePdfBlob } from "@/lib/daepyecha/pdf";
+import { parseJsonRes } from "@/lib/fetchJson";
 import type { ConfirmationRow, FormState, ItemState, NewReused, OfficeType, Purpose } from "@/lib/daepyecha/types";
 import type { Region } from "@/lib/checklist-regional/types";
 import { itemVariants, firstUnselectedVariant } from "@/lib/daepyecha/templates";
@@ -185,7 +186,7 @@ export default function RegionalJajaeModal({
         method: isEdit ? "PUT" : "POST",
         body: fd,
       });
-      const json = await res.json();
+      const json = await parseJsonRes(res);
       if (!res.ok) throw new Error(json.error ?? "저장 실패");
       onSaved();
     } catch (e) {

@@ -5,11 +5,11 @@
 // 쓰기는 service_role 키로만(서버 전용).
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, orIlike } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
-import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, sendIncheonTeamsMessage, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 import { uploadCapturePublic } from "@/lib/daepyecha/capture";
 import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
   if (center) query = query.eq("center", center);
-  if (q) query = query.or(`operator.ilike.%${q}%,vehicle_numbers.ilike.%${q}%`);
+  if (q) query = query.or(`operator.ilike.${orIlike(q)},vehicle_numbers.ilike.${orIlike(q)}`);
   if (from) query = query.gte("install_date", from);
   if (to) query = query.lte("install_date", to);
 
@@ -87,7 +87,8 @@ export async function POST(req: NextRequest) {
   }
 
   const id = crypto.randomUUID();
-  const codeMap = { ...CENTER_CODE, ...REGION_CODE } as Record<string, string>;
+  // 인천(B820)은 수도권 센터/지역 어디에도 없어 폴더 코드를 별도 지정(etc/ 폴백 방지).
+  const codeMap = { ...CENTER_CODE, ...REGION_CODE, 인천: "incheon" } as Record<string, string>;
   const code = codeMap[String(meta.center)] ?? "etc";
   const path = `${code}/${id}.pdf`;
   const bytes = new Uint8Array(await pdf.arrayBuffer());
@@ -160,6 +161,19 @@ export async function POST(req: NextRequest) {
     contentType: hasJpg ? "image/jpeg" : "application/pdf",
     action: "created",
   });
+
+  // 인천 체크리스트는 Power Automate 웹훅으로 팀즈 채널 메시지도 게시(실패해도 비차단).
+  if (variant === "incheon") {
+    await sendIncheonTeamsMessage({
+      operator,
+      model: String(meta.model ?? ""),
+      installDate,
+      vehicleNo: vehNo,
+      installer: String(meta.installer_name ?? ""),
+      action: "created",
+      imageUrl: captureUrl || undefined,
+    });
+  }
 
   // 증빙사진 릴레이(수도권 전용) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
   // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.

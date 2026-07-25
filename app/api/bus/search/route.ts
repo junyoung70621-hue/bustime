@@ -349,10 +349,12 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // 실시간 매칭된 차량을 위로, 그 안에서 ETA 짧은 순 정렬
+  // 실시간 매칭된 차량을 위로, 그 안에서 ETA 짧은 순 정렬.
+  // ETA 미상(etaUnknown)은 0분이 아니라 '알 수 없음' → 맨 뒤로 보낸다.
+  const sortKey = (r: (typeof results)[number]) => (r.etaUnknown ? Infinity : r.etaMinutes);
   results.sort((a, b) => {
     if (a.live !== b.live) return a.live ? -1 : 1;
-    return a.etaMinutes - b.etaMinutes;
+    return sortKey(a) - sortKey(b);
   });
 
   return NextResponse.json({ results, notice });

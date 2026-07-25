@@ -25,6 +25,13 @@ export function getSupabase(): SupabaseClient {
   return _client;
 }
 
+/** `.or()` 필터에 넣을 ilike 패턴 값.
+ *  검색어를 그대로 넣으면 `,` `(` `)` 가 PostgREST 필터 문법으로 파싱돼 500이 난다.
+ *  → 큰따옴표로 감싸 리터럴 처리(따옴표/역슬래시는 제거). */
+export function orIlike(q: string): string {
+  return `"%${q.replace(/["\\]/g, "")}%"`;
+}
+
 /** Supabase `vehicles` 테이블 한 행의 타입 */
 export type VehicleRow = {
   plate_no: string; // 차량번호 (예: "서울75사8915") = 공공 API plainNo

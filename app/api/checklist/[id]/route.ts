@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, sendIncheonTeamsMessage, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 import { uploadCapturePublic, CAPTURE_BUCKET } from "@/lib/daepyecha/capture";
 import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
@@ -140,6 +140,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     action: "updated",
     replaceFile: cur.teams_file ?? undefined,
   });
+
+  // 인천 체크리스트는 Power Automate 웹훅으로 팀즈 채널 메시지도 게시(수정본, 실패해도 비차단).
+  if (variant === "incheon") {
+    await sendIncheonTeamsMessage({
+      operator,
+      model: String(meta.model ?? ""),
+      installDate,
+      vehicleNo: vehNo,
+      installer: String(meta.installer_name ?? ""),
+      action: "updated",
+      imageUrl: captureUrl || undefined,
+    });
+  }
 
   // 증빙사진 재첨부(수도권 전용) — 수정 시 사진을 다시 올린 경우에만 동작.
   if (variant === "default") {

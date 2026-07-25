@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthed } from "@/lib/auth";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, orIlike } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +49,9 @@ export async function GET(req: NextRequest) {
     .limit(200);
 
   if (q) {
+    const p = orIlike(q);
     query = query.or(
-      `plate_no.ilike.%${q}%,route_id.ilike.%${q}%,route_name.ilike.%${q}%,garage_name.ilike.%${q}%`,
+      `plate_no.ilike.${p},route_id.ilike.${p},route_name.ilike.${p},garage_name.ilike.${p}`,
     );
   }
   const { data, error } = await query;

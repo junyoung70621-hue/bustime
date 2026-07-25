@@ -6,7 +6,7 @@
 // ※ 키가 풀려 503이 뜨기 시작하면, 알림 받은 뒤 cron 작업을 중지하세요(반복 메일 방지).
 // ─────────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
-import { fetchBusPositions, PublicApiAuthError } from "@/lib/publicApi";
+import { fetchBusPositions, PublicApiAuthError, PublicApiQuotaError } from "@/lib/publicApi";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +14,22 @@ export async function GET() {
   try {
     // 인증 통과(성공) = 키 동기화됨. 빈 목록이어도 인증은 통과한 것.
     await fetchBusPositions("100100118");
-    return new NextResponse(
-      "KEY SYNCED ✅ 공공 API 키가 동기화되었습니다.\n" +
-        "1) https://bustime-beta.vercel.app 에서 위치가 자동 표시됩니다(새로고침).\n" +
-        "2) ETA 완성: 로컬에서 'node scripts/fill-last-seq.mjs' 1회 실행.\n" +
-        "※ 이 알림을 받았으면 cron 작업을 중지하세요.",
-      { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } },
-    );
   } catch (e) {
     if (e instanceof PublicApiAuthError) {
       // 아직 미동기화 (정상 대기 상태)
       return NextResponse.json({ synced: false, status: "pending" }, { status: 200 });
     }
-    // 일시적 연결 오류 등 → 오탐 방지 위해 200
-    return NextResponse.json({ synced: false, status: "transient_error", detail: String(e) }, { status: 200 });
+    if (!(e instanceof PublicApiQuotaError)) {
+      // 일시적 연결 오류 등 → 오탐 방지 위해 200
+      return NextResponse.json({ synced: false, status: "transient_error", detail: String(e) }, { status: 200 });
+    }
+    // 한도 초과는 키가 이미 등록·활성이라는 증거 → 동기화 완료로 취급(아래 503 알림).
   }
+  return new NextResponse(
+    "KEY SYNCED ✅ 공공 API 키가 동기화되었습니다.\n" +
+      "1) https://bustime-beta.vercel.app 에서 위치가 자동 표시됩니다(새로고침).\n" +
+      "2) ETA 완성: 로컬에서 'node scripts/fill-last-seq.mjs' 1회 실행.\n" +
+      "※ 이 알림을 받았으면 cron 작업을 중지하세요.",
+    { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } },
+  );
 }
