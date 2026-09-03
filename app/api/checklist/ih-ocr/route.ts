@@ -29,6 +29,16 @@ const PROMPTS: Record<string, string> = {
     'JSON만 출력: {"serial":"시리얼 넘버 숫자"} 안 보이면 빈 문자열.',
 };
 
+// 429 응답의 RetryInfo(retryDelay "24s")에서 대기 초 추출. 없으면 30초 안내.
+function retrySeconds(json: unknown): number {
+  const details = (json as { error?: { details?: { retryDelay?: string }[] } })?.error?.details ?? [];
+  for (const d of details) {
+    const m = /^(\d+)/.exec(d?.retryDelay ?? "");
+    if (m) return Number(m[1]);
+  }
+  return 30;
+}
+
 export async function POST(req: NextRequest) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return NextResponse.json({ error: "GEMINI_API_KEY 미설정 — 수기로 입력해주세요." }, { status: 500 });
@@ -43,9 +53,8 @@ export async function POST(req: NextRequest) {
 
   const b64 = Buffer.from(await image.arrayBuffer()).toString("base64");
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-      {
+    const call = () =>
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -59,9 +68,22 @@ export async function POST(req: NextRequest) {
           ],
           generationConfig: { responseMimeType: "application/json", temperature: 0 },
         }),
-      },
-    );
-    const json = await res.json();
+      });
+
+    let res = await call();
+    let json = await res.json();
+    // 무료 한도(분당 요청 수) 429: 안내된 대기시간이 짧으면 서버에서 기다렸다 1회 자동 재시도.
+    if (res.status === 429) {
+      const wait = retrySeconds(json);
+      if (wait <= 20) {
+        await new Promise((r) => setTimeout(r, (wait + 1) * 1000));
+        res = await call();
+        json = await res.json();
+      }
+    }
+    if (res.status === 429) {
+      return NextResponse.json({ error: `요청이 몰렸어요 — ${retrySeconds(json)}초 뒤에 재시도해주세요.` }, { status: 429 });
+    }
     if (!res.ok) {
       return NextResponse.json({ error: `인식 API 오류(${res.status}): ${json?.error?.message ?? ""}` }, { status: 502 });
     }
