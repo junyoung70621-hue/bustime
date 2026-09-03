@@ -8,6 +8,9 @@
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
 import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
+import { emptyPhotoSlots, uploadPhotosDirect, type PhotoSlot } from "@/lib/daepyecha/photo";
+import type { PhotoRef } from "@/lib/daepyecha/photo-upload";
+import PhotoStep from "../checklist/PhotoStep";
 import { emptyIncForm, incItemDone, INC_CHECK_ITEMS, INC_CHECK_KEYS, INC_NA_KEYS, INC_MODEL } from "@/lib/checklist-incheon/templates";
 import type { IncFormState, IncRow, VehicleType, OX } from "@/lib/checklist-incheon/types";
 import SignaturePad from "../SignaturePad";
@@ -66,6 +69,13 @@ export default function IncheonChecklistModal({
     }
   });
   const [draftHandled, setDraftHandled] = useState(false);
+  // 신규 작성은 사진 촬영 단계부터(수도권과 동일). 임시저장본이 있거나 수정이면 폼으로 바로.
+  const [step, setStep] = useState<"photos" | "form">(isEdit || draft ? "form" : "photos");
+  const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
+  // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  useEffect(() => () => { for (const s of photosRef.current) if (s.preview) URL.revokeObjectURL(s.preview); }, []);
 
   useEffect(() => {
     if (!editId) return;
@@ -141,6 +151,12 @@ export default function IncheonChecklistModal({
     setSaving(true);
     try {
       const { pdf, jpg } = await generatePdfAndJpg(captureRef.current);
+
+      // 증빙사진은 Storage에 직접 업로드(수도권과 동일) → 본문에는 참조(path)만 실어 413 차단.
+      const slots = photos.filter((s) => !s.na && s.file).map((s) => ({ label: s.label, file: s.file! }));
+      let photoRefs: PhotoRef[] = [];
+      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, crypto.randomUUID());
+
       const meta = {
         center: "인천",
         operator: data.operatorName,
@@ -151,6 +167,7 @@ export default function IncheonChecklistModal({
         operator_signer_name: "",
         data, // 서명 포함 저장(수정 시 유지)
         variant: "incheon",
+        ...(photoRefs.length ? { photos_upload: photoRefs } : {}),
         ...(isEdit ? { modified_by: modifiedBy.trim() } : {}),
       };
       const metaStr = JSON.stringify(meta);
@@ -194,15 +211,26 @@ export default function IncheonChecklistModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-          <h2 className="text-base font-bold text-slate-800">{isEdit ? "인천 체크리스트 수정" : "인천 설치완료 체크리스트"}</h2>
+          <h2 className="text-base font-bold text-slate-800">{isEdit ? "인천 체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : "인천 설치완료 체크리스트"}</h2>
           <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
           {loading ? (
             <p className="py-10 text-center text-sm text-slate-400">불러오는 중…</p>
+          ) : step === "photos" ? (
+            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("form")} />
           ) : (
             <div className="flex flex-col gap-3">
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={() => setStep("photos")}
+                  className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
+                >
+                  ← 사진 촬영
+                </button>
+              )}
               {!isEdit && draft && !draftHandled && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="text-sm font-bold text-emerald-800">임시저장된 작성 내용이 있어요</p>

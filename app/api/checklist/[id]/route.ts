@@ -154,8 +154,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     });
   }
 
-  // 증빙사진 재첨부(수도권 전용) — 수정 시 사진을 다시 올린 경우에만 동작.
-  if (variant === "default") {
+  // 증빙사진 재첨부(수도권·인천) — 수정 시 사진을 다시 올린 경우에만 동작.
+  if (variant === "default" || variant === "incheon") {
     await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
       center,
       operator,

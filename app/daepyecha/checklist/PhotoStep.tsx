@@ -6,6 +6,7 @@
 //   각 슬롯은 선택 입력: 없으면 "없음" 체크 후 통과 가능.
 //   사진은 모달 state로 보유 → 저장 시 압축해 메일 릴레이(Teams)로 전송.
 // ─────────────────────────────────────────────────────────────
+import { useState } from "react";
 import type { PhotoSlot } from "@/lib/daepyecha/photo";
 
 export default function PhotoStep({
@@ -17,6 +18,8 @@ export default function PhotoStep({
   setPhotos: React.Dispatch<React.SetStateAction<PhotoSlot[]>>;
   onNext: () => void;
 }) {
+  // 예시사진 오버레이(슬롯 인덱스 = /photo-examples/<i>.jpg)
+  const [example, setExample] = useState<number | null>(null);
   const setFile = (i: number, file: File | null) => {
     setPhotos((prev) =>
       prev.map((s, idx) => {
@@ -58,10 +61,19 @@ export default function PhotoStep({
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-slate-700">{s.label}</span>
-              <label className="flex items-center gap-1 text-xs font-semibold text-slate-500">
-                <input type="checkbox" checked={s.na} onChange={() => toggleNa(i)} className="h-4 w-4" />
-                없음
-              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExample(i)}
+                  className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-bold text-sky-700"
+                >
+                  예시
+                </button>
+                <label className="flex items-center gap-1 text-xs font-semibold text-slate-500">
+                  <input type="checkbox" checked={s.na} onChange={() => toggleNa(i)} className="h-4 w-4" />
+                  없음
+                </label>
+              </div>
             </div>
 
             {s.na ? (
@@ -110,6 +122,19 @@ export default function PhotoStep({
       >
         체크리스트 작성 →
       </button>
+
+      {/* 예시사진 오버레이(탭하면 닫힘) */}
+      {example !== null && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-2 bg-black/80 p-4"
+          onClick={() => setExample(null)}
+        >
+          <p className="text-sm font-bold text-white">예시 — {photos[example].label}</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/photo-examples/${example}.jpg`} alt={`${photos[example].label} 예시`} className="max-h-[80dvh] w-auto max-w-full rounded-xl object-contain" />
+          <p className="text-xs text-white/70">화면을 탭하면 닫힙니다</p>
+        </div>
+      )}
     </div>
   );
 }

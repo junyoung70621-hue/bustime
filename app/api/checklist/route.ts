@@ -175,9 +175,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 증빙사진 릴레이(수도권 전용) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
+  // 증빙사진 릴레이(수도권·인천) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
   // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.
-  if (variant === "default") {
+  // 인천도 수도권 트리의 "인천" 센터 폴더로 동일하게 보관된다.
+  if (variant === "default" || variant === "incheon") {
     await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
       center,
       operator,
