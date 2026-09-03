@@ -47,7 +47,7 @@ export default function PhotoStep({
       <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
         <p className="text-sm font-bold text-sky-800">증빙사진 촬영 ({done}/{photos.length})</p>
         <p className="mt-1 text-xs text-sky-700">
-          증빙 보관용입니다. 해당 장비가 없으면 <b>없음</b>을 체크하고 넘어가세요. (모두 선택사항)
+          증빙 보관용입니다. <b>모든 칸을 촬영해야</b> 다음으로 진행됩니다. 해당 장비가 없는 경우에만 <b>없음</b>을 체크하세요.
         </p>
       </div>
 
@@ -118,9 +118,10 @@ export default function PhotoStep({
 
       <button
         onClick={onNext}
-        className="h-12 w-full rounded-xl bg-brand-600 font-bold text-white"
+        disabled={done < photos.length}
+        className="h-12 w-full rounded-xl bg-brand-600 font-bold text-white disabled:opacity-40"
       >
-        체크리스트 작성 →
+        {done < photos.length ? `촬영 남음 ${photos.length - done}칸 (촬영 또는 없음 체크)` : "체크리스트 작성 →"}
       </button>
 
       {/* 예시사진 오버레이(탭하면 닫힘) */}

@@ -11,6 +11,7 @@ import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import { emptyPhotoSlots, uploadPhotosDirect, type PhotoSlot } from "@/lib/daepyecha/photo";
 import type { PhotoRef } from "@/lib/daepyecha/photo-upload";
 import PhotoStep from "../checklist/PhotoStep";
+import AutoInputStep, { SLOTS } from "./AutoInputStep";
 import { emptyIncForm, incItemDone, INC_CHECK_ITEMS, INC_CHECK_KEYS, INC_NA_KEYS, INC_MODEL } from "@/lib/checklist-incheon/templates";
 import type { IncFormState, IncRow, VehicleType, OX } from "@/lib/checklist-incheon/types";
 import SignaturePad from "../SignaturePad";
@@ -55,6 +56,7 @@ export default function IncheonChecklistModal({
   const [error, setError] = useState<string | null>(null);
   const [modifiedBy, setModifiedBy] = useState("");
   const [pad, setPad] = useState(false);
+  const [ihHelp, setIhHelp] = useState(false); // 단말기 IH 확인방법 팝업
   const [draftSaved, setDraftSaved] = useState(false);
   const captureRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<IncFormState>(() => emptyIncForm(todayStr()));
@@ -69,8 +71,8 @@ export default function IncheonChecklistModal({
     }
   });
   const [draftHandled, setDraftHandled] = useState(false);
-  // 신규 작성은 사진 촬영 단계부터(수도권과 동일). 임시저장본이 있거나 수정이면 폼으로 바로.
-  const [step, setStep] = useState<"photos" | "form">(isEdit || draft ? "form" : "photos");
+  // 신규 작성은 사진 촬영 → IH 자동입력 → 폼 순서. 임시저장본이 있거나 수정이면 폼으로 바로.
+  const [step, setStep] = useState<"photos" | "auto" | "form">(isEdit || draft ? "form" : "photos");
   const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
   // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
   const photosRef = useRef(photos);
@@ -211,7 +213,7 @@ export default function IncheonChecklistModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-          <h2 className="text-base font-bold text-slate-800">{isEdit ? "인천 체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : "인천 설치완료 체크리스트"}</h2>
+          <h2 className="text-base font-bold text-slate-800">{isEdit ? "인천 체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : step === "auto" ? "IH 자동입력" : "인천 설치완료 체크리스트"}</h2>
           <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
 
@@ -219,16 +221,18 @@ export default function IncheonChecklistModal({
           {loading ? (
             <p className="py-10 text-center text-sm text-slate-400">불러오는 중…</p>
           ) : step === "photos" ? (
-            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("form")} />
+            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("auto")} />
+          ) : step === "auto" ? (
+            <AutoInputStep patch={patch} onNext={() => setStep("form")} onBack={() => setStep("photos")} />
           ) : (
             <div className="flex flex-col gap-3">
               {!isEdit && (
                 <button
                   type="button"
-                  onClick={() => setStep("photos")}
+                  onClick={() => setStep("auto")}
                   className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
                 >
-                  ← 사진 촬영
+                  ← IH 자동입력
                 </button>
               )}
               {!isEdit && draft && !draftHandled && (
@@ -269,7 +273,10 @@ export default function IncheonChecklistModal({
 
               {/* IH (선택) */}
               <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-sm font-bold text-slate-600">단말기 IH <span className="font-normal text-slate-400">— 선택</span></p>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-bold text-slate-600">단말기 IH <span className="font-normal text-slate-400">— 선택</span></p>
+                  <button type="button" onClick={() => setIhHelp(true)} className="rounded bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700">설명</button>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <L t="표출단말기 IH"><input value={data.pyochulIH} onChange={(e) => patch({ pyochulIH: e.target.value })} className={inp} /></L>
                   <L t="표출(모듈) IH"><input value={data.pyochulModuleIH} onChange={(e) => patch({ pyochulModuleIH: e.target.value })} className={inp} /></L>
@@ -400,6 +407,30 @@ export default function IncheonChecklistModal({
         {pad && (
           <SignaturePad title="설치자 서명" initialName={data.installerName}
             onConfirm={(name, sig) => { patch({ installerName: name, installerSig: sig }); setPad(false); }} onClose={() => setPad(false)} />
+        )}
+
+        {/* 단말기 IH 확인방법 팝업 */}
+        {ihHelp && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setIhHelp(false)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-slate-800">단말기 IH 확인방법</p>
+                <button onClick={() => setIhHelp(false)} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+              <p className="mt-2 rounded-lg bg-indigo-50 px-2 py-1.5 text-xs font-semibold text-indigo-700">
+                설정 &gt; 설정 &gt; 1472 관리자 모드 진입
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {SLOTS.map((s) => (
+                  <li key={s.kind} className="rounded-lg border border-slate-200 px-2 py-1.5">
+                    <p className="text-xs font-bold text-slate-700">{s.label}</p>
+                    <p className="text-xs text-slate-500">{s.hint}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs font-semibold text-slate-500">※ 입력이 잘되지 않을 경우 수동입력 바랍니다.</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
