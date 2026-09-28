@@ -29,6 +29,8 @@ export const REG_JAJAE_ITEMS: Record<RegJajaeModel, Record<RegJajaePurpose, Item
       { name: "승하차 백커버 (가로형 , 세로형)", bigo: "승하차 설치 및 고정용 (신규 , 재활용)", hasNewReused: true },
     ],
     "증차": [
+      { name: "운전자 단말기", bigo: "운전자 단말기", hasNewReused: false },
+      { name: "승하차 단말기", bigo: "승하차 단말기", hasNewReused: false },
       { name: "메인 전원 케이블", bigo: "차량메인전원 -> SMPS 전원 공급용", hasNewReused: false },
       { name: "승차 통신 케이블", bigo: "운전자 -> 승차 단말기 통신용", hasNewReused: false },
       { name: "승하차 통신 케이블", bigo: "승차/하차 통신용", hasNewReused: false },
