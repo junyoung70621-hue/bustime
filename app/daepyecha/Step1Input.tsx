@@ -4,7 +4,7 @@
 // 신규 작성 1단계: 기본 정보 입력
 //   센터 / 운수사 / 모델 / 수량(대수) / 차량번호 / 지급날짜 + 품목별 수량·신규재활용
 // ─────────────────────────────────────────────────────────────
-import { CENTERS, MODELS, PURPOSES, OFFICE_TYPES, itemVariants } from "@/lib/daepyecha/templates";
+import { JAJAE_CENTERS as CENTERS, MODELS, PURPOSES, OFFICE_TYPES, itemVariants } from "@/lib/daepyecha/templates";
 import type { FormState, Model, NewReused, Center } from "@/lib/daepyecha/types";
 
 export default function Step1Input({

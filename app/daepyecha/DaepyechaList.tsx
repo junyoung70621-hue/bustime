@@ -7,7 +7,7 @@
 //   - 수정(편집 모달), 삭제(휴지통), 휴지통 보기/복원/영구삭제/비우기
 // ─────────────────────────────────────────────────────────────
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CENTERS } from "@/lib/daepyecha/templates";
+import { JAJAE_CENTERS as CENTERS } from "@/lib/daepyecha/templates";
 import type { ConfirmationRow, Center } from "@/lib/daepyecha/types";
 import DaepyechaModal from "./DaepyechaModal";
 

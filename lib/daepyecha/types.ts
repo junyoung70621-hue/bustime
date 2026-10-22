@@ -2,8 +2,8 @@
 // 대폐차 자재 지급확인서 공용 타입
 // ─────────────────────────────────────────────────────────────
 
-export type Model = "B620" | "B700" | "B710" | "B800";
-export type Center = "강남" | "강서" | "강북" | "강동";
+export type Model = "B620" | "B700" | "B710" | "B800" | "B820";
+export type Center = "강남" | "강서" | "강북" | "강동" | "인천";
 export type NewReused = "신규" | "재활용";
 export type Purpose = "대폐차" | "증차";
 export type OfficeType = "본사" | "영업소";

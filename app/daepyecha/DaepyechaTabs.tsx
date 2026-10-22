@@ -12,7 +12,7 @@ import IncheonChecklistList from "./checklist-incheon/IncheonChecklistList";
 const TABS = [
   { key: "jajae", label: "자재 지급확인서" },
   { key: "checklist", label: "설치 완료 체크리스트" },
-  { key: "incheon", label: "인천 체크리스트" },
+  { key: "incheon", label: "[인천]설치완료 체크리스트" },
 ] as const;
 
 export default function DaepyechaTabs() {

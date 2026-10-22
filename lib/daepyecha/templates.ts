@@ -16,6 +16,7 @@ const VARIANT_SUFFIXES: { suffix: string; options: string[] }[] = [
   { suffix: "(가로형 , 세로형)", options: ["가로형", "세로형"] },
   { suffix: "(1.5M / 6M)", options: ["1.5M", "6M"] },
   { suffix: "(일반 , 카운티용)", options: ["일반", "카운티용"] },
+  { suffix: "(코리아타코(구형) , 코리아타코(신형) , 조영 , 태호)", options: ["코리아타코(구형)", "코리아타코(신형)", "조영", "태호"] },
 ];
 
 const stripSpace = (s: string) => s.replace(/\s+/g, "");
@@ -29,7 +30,8 @@ export function itemVariants(name: string): string[] | undefined {
 /** 표시용 품목명 — 선택된 형이 있으면 접미사를 그 형만으로 치환 */
 export function itemDisplayName(it: ItemState): string {
   if (!it.variant || !itemVariants(it.name)) return it.name;
-  return it.name.replace(/\([^()]*\)\s*$/, `(${it.variant})`);
+  // 마지막 괄호 접미사(1단계 중첩 허용: "(코리아타코(구형) , ...)")를 선택형으로 치환
+  return it.name.replace(/\((?:[^()]|\([^()]*\))*\)\s*$/, `(${it.variant})`);
 }
 
 /** 형 선택형인데 아직 미선택인 첫 품목명 반환(없으면 null) — 저장 전 필수검증용 */
@@ -38,8 +40,9 @@ export function firstUnselectedVariant(items: ItemState[]): string | null {
   return miss ? miss.name : null;
 }
 
-export const CENTERS: Center[] = ["강남", "강서", "강북", "강동"];
-export const MODELS: Model[] = ["B620", "B700", "B710", "B800"];
+export const CENTERS: Center[] = ["강남", "강서", "강북", "강동"]; // 수도권 체크리스트 공용(인천은 별도 탭)
+export const JAJAE_CENTERS: Center[] = [...CENTERS, "인천"]; // 자재 지급확인서 전용
+export const MODELS: Model[] = ["B620", "B700", "B710", "B800", "B820"];
 export const PURPOSES: Purpose[] = ["대폐차", "증차"];
 export const OFFICE_TYPES: OfficeType[] = ["본사", "영업소"];
 
@@ -49,6 +52,7 @@ export const CENTER_CODE: Record<Center, string> = {
   강서: "gangseo",
   강북: "gangbuk",
   강동: "gangdong",
+  인천: "incheon",
 };
 
 export const MODEL_TEMPLATES: Record<Model, ItemTemplate[]> = {
@@ -108,6 +112,24 @@ export const MODEL_TEMPLATES: Record<Model, ItemTemplate[]> = {
     { name: "타코메타 케이블", bigo: "* 타코메타 전원 및 통신용", hasNewReused: false },
     { name: "외장 LTE 모뎀 케이블", bigo: "* 통합 → 외장모뎀 전원 및 통신용", hasNewReused: false },
     { name: "GPS ANT", bigo: "* GPS 안테나 수신용", hasNewReused: false },
+    { name: "운전자봉 (U형 , ㄱ형)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
+    { name: "ㄷ자 봉", bigo: "* 승차단말기 설치 및 고정용", hasNewReused: true },
+    { name: "표출기 브라켓 (힌지 포함)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
+    { name: "통합단말기 고정브라켓", bigo: "* 통합단말기 설치 및 고정용", hasNewReused: true },
+    { name: "통합단말기 커버", bigo: "* 통합단말기 커버", hasNewReused: true },
+  ],
+  // B820: B800 기준 + 타코메타 제조사 선택형, 외장모뎀(어댑터), 빈좌석표시기/전자노선도 케이블
+  B820: [
+    { name: "통합단말기 전원 케이블", bigo: "* 차량메인전원 → 통합 전원 공급용", hasNewReused: false },
+    { name: "표출기 통신케이블", bigo: "* 통합 → 표출기 전원 및 통신용", hasNewReused: false },
+    { name: "승차 통신 케이블 (7M)", bigo: "* 통합 → 승차 전원 및 통신용", hasNewReused: false },
+    { name: "하차1 통신 케이블 (17M)", bigo: "* 통합 → 하차1 전원 및 통신용", hasNewReused: false },
+    { name: "하차2 통신 케이블 (15M)", bigo: "* 통합 → 하차2 전원 및 통신용", hasNewReused: false },
+    { name: "타코메타 케이블 (코리아타코(구형) , 코리아타코(신형) , 조영 , 태호)", bigo: "* 타코메타 전원 및 통신용", hasNewReused: false },
+    { name: "외장모뎀케이블(어댑터)", bigo: "* 통합 → 외장모뎀 전원 및 통신용", hasNewReused: false },
+    { name: "GPS ANT", bigo: "* GPS 안테나 수신용", hasNewReused: false },
+    { name: "빈좌석표시기 케이블", bigo: "* 통합 → 빈좌석표시기 전원 및 통신용", hasNewReused: false },
+    { name: "전자노선도 케이블", bigo: "* 통합 → 전자노선도 전원 및 통신용", hasNewReused: false },
     { name: "운전자봉 (U형 , ㄱ형)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
     { name: "ㄷ자 봉", bigo: "* 승차단말기 설치 및 고정용", hasNewReused: true },
     { name: "표출기 브라켓 (힌지 포함)", bigo: "* 표출기 설치 및 고정용", hasNewReused: true },
