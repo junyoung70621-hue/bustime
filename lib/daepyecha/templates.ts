@@ -27,11 +27,18 @@ export function itemVariants(name: string): string[] | undefined {
   return VARIANT_SUFFIXES.find((v) => n.endsWith(stripSpace(v.suffix)))?.options;
 }
 
+// 마지막 괄호 접미사(1단계 중첩 허용: "(코리아타코(구형) , ...)")
+const SUFFIX_RE = /\s*\((?:[^()]|\([^()]*\))*\)\s*$/;
+
+/** 선택형 접미사를 뗀 품목명(입력 화면용, 선택지는 따로 표시) */
+export function itemBaseName(name: string): string {
+  return itemVariants(name) ? name.replace(SUFFIX_RE, "") : name;
+}
+
 /** 표시용 품목명 — 선택된 형이 있으면 접미사를 그 형만으로 치환 */
 export function itemDisplayName(it: ItemState): string {
   if (!it.variant || !itemVariants(it.name)) return it.name;
-  // 마지막 괄호 접미사(1단계 중첩 허용: "(코리아타코(구형) , ...)")를 선택형으로 치환
-  return it.name.replace(/\((?:[^()]|\([^()]*\))*\)\s*$/, `(${it.variant})`);
+  return `${itemBaseName(it.name)} (${it.variant})`;
 }
 
 /** 형 선택형인데 아직 미선택인 첫 품목명 반환(없으면 null) — 저장 전 필수검증용 */

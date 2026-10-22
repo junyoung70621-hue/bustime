@@ -4,7 +4,7 @@
 // 신규 작성 1단계: 기본 정보 입력
 //   센터 / 운수사 / 모델 / 수량(대수) / 차량번호 / 지급날짜 + 품목별 수량·신규재활용
 // ─────────────────────────────────────────────────────────────
-import { JAJAE_CENTERS as CENTERS, MODELS, PURPOSES, OFFICE_TYPES, itemVariants } from "@/lib/daepyecha/templates";
+import { JAJAE_CENTERS as CENTERS, MODELS, PURPOSES, OFFICE_TYPES, itemVariants, itemBaseName } from "@/lib/daepyecha/templates";
 import type { FormState, Model, NewReused, Center } from "@/lib/daepyecha/types";
 
 export default function Step1Input({
@@ -169,7 +169,8 @@ export default function Step1Input({
                 <li key={i} className="px-3 py-2">
                   <div className="flex items-center gap-2">
                     <span className="w-5 shrink-0 text-xs text-slate-400">{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{it.name}</span>
+                    {/* 선택형 품목은 선택지가 아래 줄에 있으므로 이름에서 접미사 제거(긴 이름 말줄임 방지) */}
+                    <span className="min-w-0 flex-1 break-keep text-sm text-slate-700">{variantOpts ? itemBaseName(it.name) : it.name}</span>
                     {it.hasNewReused && (
                       <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
                         {(["신규", "재활용"] as NewReused[]).map((v) => (
@@ -196,22 +197,22 @@ export default function Step1Input({
                     />
                   </div>
                   {variantOpts && (
-                    <div className="mt-1.5 flex items-center gap-2 pl-7">
-                      <span className="shrink-0 text-xs text-slate-400">형 선택 (선택 시 그 형만 표기)</span>
-                      <span className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200">
+                    <div className="mt-1.5 flex flex-col gap-1 pl-7">
+                      <span className="text-xs text-slate-400">형 선택 (선택 시 그 형만 표기)</span>
+                      <div className="flex flex-wrap gap-1">
                         {variantOpts.map((v) => (
                           <button
                             key={v}
                             type="button"
                             onClick={() => onItemVariant(i, v)}
-                            className={`px-2 py-1 text-xs font-semibold ${
-                              it.variant === v ? "bg-brand-600 text-white" : "bg-white text-slate-500"
+                            className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${
+                              it.variant === v ? "bg-brand-600 text-white ring-brand-600" : "bg-white text-slate-500 ring-slate-200"
                             }`}
                           >
                             {v}
                           </button>
                         ))}
-                      </span>
+                      </div>
                     </div>
                   )}
                 </li>
