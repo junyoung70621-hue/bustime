@@ -140,3 +140,25 @@ Power Automate **"새 메일이 도착하면(V2)"** 트리거로 받아 Teams(=S
 - 제목/본문/첨부: `lib/daepyecha/teams.ts` (`sendRelayMail`, `sendPhotoRelayMail` — 사진 제목 prefix `증빙사진`)
 - 사진 전송·캡션 주입: `app/api/checklist/route.ts` (POST, `variant === "default"`)
 - 촬영 UI/슬롯/압축: `app/daepyecha/checklist/PhotoStep.tsx`, `lib/daepyecha/photo.ts`
+
+---
+
+## 흐름 C — 수도권 탭 "인천" 자재·체크리스트 → 별도 팀즈 채널 (2026-10-27 설정 완료)
+
+- 대상: Teams 사이트 `msteams_e6fa17` 의 채널 폴더(Site Address = `https://atecmobility.sharepoint.com/sites/msteams_e6fa17`).
+- 수도권 탭(센터=인천) 자재·체크리스트 메일 제목 `대폐차|인천|운수사|날짜|new|이전파일` 만 대상.
+  [인천]탭(B820) 체크리스트는 `인천체크리스트|인천|…` 라 어느 흐름에도 안 잡힘(커밋 56c6a10, 웹훅 카드만 감).
+
+### 새 흐름 "인천 대폐차"
+트리거 새 메일 도착(V2, Outlook.com, Inbox, 첨부 포함=Yes, 첨부만=Yes, 제목필터 `대폐차`)
+→ Condition `split(triggerBody()?['Subject'], '|')?[1]` is equal to `인천`
+→ True: Apply to each `triggerBody()?['Attachments']`
+   → SharePoint Create file (Site = 위 주소, Folder = `/Shared Documents/<채널폴더>`,
+     File Name `items('Apply_to_each')?['Name']`, File Content `items('Apply_to_each')?['ContentBytes']`)
+
+### 기존 흐름 "대폐차 PDF → Teams 저장" 수정
+트리거 바로 아래 Condition(위와 같은 식 = `인천`) → True: Terminate(Cancelled), False: 비움 → 기존 Initialize variable×3·Condition·Apply to each 그대로.
+저장 시 기존 Create file 의 옛 파라미터 `Overwrite` 가 스키마 오류를 내서 제거함.
+
+### 미구현
+수정 저장 시 이전 파일 교체(제목 `[4]=update`, `[5]=이전파일명`)는 새 흐름에 없음 — 같은 파일명이면 덮어쓰고, 날짜 변경 시 이전 파일이 남음.
