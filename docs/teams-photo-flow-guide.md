@@ -163,3 +163,10 @@ Power Automate **"새 메일이 도착하면(V2)"** 트리거로 받아 Teams(=S
 
 ### 미구현
 수정 저장 시 이전 파일 교체(제목 `[4]=update`, `[5]=이전파일명`)는 새 흐름에 없음 — 같은 파일명이면 덮어쓰고, 날짜 변경 시 이전 파일이 남음.
+
+### 흐름 C-2 — 인천 증빙사진 → 대폐차(인천) 채널 (2026-10-27 안내)
+- 새 흐름 "인천 증빙사진": 트리거 제목필터 `증빙사진` → Condition `split(Subject,'|')?[2]` = `인천`
+  → Apply to each Attachments → SharePoint Create file(사이트 msteams_e6fa17,
+  Folder `concat('{채널경로}/사진/', [3]운수사, '/', [4]차량번호)`, Name/ContentBytes).
+- 기존 "대폐차 증빙사진 업로드" 흐름 맨 위에 같은 조건 → True: Terminate(Cancelled).
+- 수도권 탭 센터=인천 사진도 같은 제목이라 함께 채널로 감. 깨지면 ContentBytes에 base64ToBinary.
