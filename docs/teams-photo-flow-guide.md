@@ -146,8 +146,9 @@ Power Automate **"새 메일이 도착하면(V2)"** 트리거로 받아 Teams(=S
 ## 흐름 C — 수도권 탭 "인천" 자재·체크리스트 → 별도 팀즈 채널 (2026-10-27 설정 완료)
 
 - 대상: Teams 사이트 `msteams_e6fa17` 의 채널 폴더(Site Address = `https://atecmobility.sharepoint.com/sites/msteams_e6fa17`).
-- 수도권 탭(센터=인천) 자재·체크리스트 메일 제목 `대폐차|인천|운수사|날짜|new|이전파일` 만 대상.
-  [인천]탭(B820) 체크리스트는 `인천체크리스트|인천|…` 라 어느 흐름에도 안 잡힘(커밋 56c6a10, 웹훅 카드만 감).
+- 대상 메일: 제목 `대폐차|인천|운수사|날짜|new|이전파일` — 수도권 탭(센터=인천) 자재·체크리스트 **및 [인천]탭(B820) 체크리스트** 모두.
+  (한때 [인천]탭 prefix를 `인천체크리스트`로 분리했다가(56c6a10) 같은 채널로 가야 해서 되돌림.)
+- 파일 저장 후 Condition `contains(BodyPreview,'IMG:')` → True: Post message(캡션+`<img src=IMG URL width=500>`) / False: Post message(`자재지급확인서 운수사 날짜`). 채널: 수도권버스지원팀 › 03. 대폐차(인천).
 
 ### 새 흐름 "인천 대폐차"
 트리거 새 메일 도착(V2, Outlook.com, Inbox, 첨부 포함=Yes, 첨부만=Yes, 제목필터 `대폐차`)
