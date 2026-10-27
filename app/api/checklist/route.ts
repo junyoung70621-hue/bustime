@@ -148,7 +148,8 @@ export async function POST(req: NextRequest) {
   //   둘째 줄 "IMG:<공개URL>" → 플로우 B가 추출해 <img>로 인라인 게시.
   const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
   await sendRelayMail({
-    subject: `대폐차|${center}|${operator}|${installDate}`,
+    // [인천]탭(variant=incheon)은 prefix를 "인천체크리스트"로 분리 → 기존 "대폐차" 제목필터 플로우(센터폴더·수도권 신규채널)가 잡지 않음.
+    subject: `${variant === "incheon" ? "인천체크리스트" : "대폐차"}|${center}|${operator}|${installDate}`,
     text:
       caption +
       (captureUrl ? `IMG:${captureUrl}\n` : "") +
