@@ -9,7 +9,7 @@ import { getSupabase, orIlike } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
-import { sendRelayMail, sendIncheonTeamsMessage, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
+import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
 import { uploadCapturePublic } from "@/lib/daepyecha/capture";
 import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
@@ -162,18 +162,6 @@ export async function POST(req: NextRequest) {
     action: "created",
   });
 
-  // 인천 체크리스트는 Power Automate 웹훅으로 팀즈 채널 메시지도 게시(실패해도 비차단).
-  if (variant === "incheon") {
-    await sendIncheonTeamsMessage({
-      operator,
-      model: String(meta.model ?? ""),
-      installDate,
-      vehicleNo: vehNo,
-      installer: String(meta.installer_name ?? ""),
-      action: "created",
-      imageUrl: captureUrl || undefined,
-    });
-  }
 
   // 증빙사진 릴레이(수도권·인천) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
   // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.

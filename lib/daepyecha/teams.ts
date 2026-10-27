@@ -143,67 +143,6 @@ export async function sendPhotoRelayMail(opts: {
   }
 }
 
-/** 인천 체크리스트 팀즈 알림 — Power Automate 웹훅(Workflows)으로 채널 메시지 게시.
- *  "웹훅 요청 수신 시 채널에 게시" 플로우가 기대하는 Adaptive Card 형식으로 전송.
- *  TEAMS_INCHEON_WEBHOOK_URL 미설정 시 비활성. 실패해도 throw하지 않음(저장 비차단). */
-export async function sendIncheonTeamsMessage(opts: {
-  operator: string;
-  model: string;
-  installDate: string;
-  vehicleNo: string;
-  installer: string;
-  action: "created" | "updated";
-  imageUrl?: string; // 캡쳐(JPG) 공개 URL — 있으면 카드에 인라인 표시
-}): Promise<void> {
-  const url = process.env.TEAMS_INCHEON_WEBHOOK_URL;
-  if (!url) return; // 미설정 → 비활성
-
-  const title = `인천 설치완료 체크리스트${opts.action === "updated" ? " (수정본)" : ""}`;
-  const card = {
-    type: "message",
-    attachments: [
-      {
-        contentType: "application/vnd.microsoft.card.adaptive",
-        content: {
-          $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-          type: "AdaptiveCard",
-          version: "1.4",
-          body: [
-            { type: "TextBlock", text: title, weight: "Bolder", size: "Medium", wrap: true },
-            {
-              type: "TextBlock",
-              text: `${opts.operator}_${opts.vehicleNo}_대폐차_${opts.installDate} 설치완료`,
-              wrap: true,
-            },
-            {
-              type: "FactSet",
-              facts: [
-                { title: "운수사", value: opts.operator },
-                { title: "모델", value: opts.model },
-                { title: "설치일", value: opts.installDate },
-                { title: "차량번호", value: opts.vehicleNo },
-                { title: "설치자", value: opts.installer },
-              ].filter((f) => f.value),
-            },
-            ...(opts.imageUrl ? [{ type: "Image", url: opts.imageUrl, size: "Stretch" }] : []),
-          ],
-        },
-      },
-    ],
-  };
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(card),
-    });
-    if (!res.ok) console.error("인천 팀즈 웹훅 실패:", res.status, await res.text().catch(() => ""));
-  } catch (e) {
-    console.error("인천 팀즈 웹훅 전송 실패:", e);
-  }
-}
-
 export type RelayPayload = {
   fileName: string;
   pdf: Uint8Array; // 첨부 바이트(PDF 또는 JPG)
