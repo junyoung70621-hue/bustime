@@ -89,15 +89,14 @@ export async function uploadPhotosDirect(
   }
   if (!res.ok || !json.urls) throw new Error(json.error ?? "서명 URL 발급 실패");
 
-  // ② 각 사진 압축 후 서명 URL로 직접 업로드(병렬)
+  // ② 서명 URL로 직접 업로드(병렬). 압축은 촬영 시점(PhotoStep)에 이미 끝남.
   const sb = getSupabaseBrowser();
   const byIdx = new Map(json.urls.map((u) => [u.idx, u]));
   return Promise.all(
     slots.map(async (s, idx) => {
       const u = byIdx.get(idx);
       if (!u) throw new Error(`서명 URL 누락(${s.label})`);
-      const blob = await compressImage(s.file, 1600, 0.7);
-      const up = await sb.storage.from(PHOTO_BUCKET).uploadToSignedUrl(u.path, u.token, blob, {
+      const up = await sb.storage.from(PHOTO_BUCKET).uploadToSignedUrl(u.path, u.token, s.file, {
         contentType: "image/jpeg",
         upsert: true,
       });

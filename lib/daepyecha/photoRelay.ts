@@ -34,12 +34,16 @@ export async function relayUploadedPhotos(
   // 실패 시 임시본을 남겨두면 고아 파일이 되지만, 지우면 증빙이 영구 유실된다.
   let sent = false;
   try {
-    const photos: { filename: string; bytes: Uint8Array }[] = [];
-    for (const r of refs) {
-      const dl = await sb.storage.from(PHOTO_BUCKET).download(r.path);
-      if (dl.error || !dl.data) continue;
-      photos.push({ filename: r.filename, bytes: new Uint8Array(await dl.data.arrayBuffer()) });
-    }
+    // 최대 8장 병렬 다운로드(순차면 장당 왕복 지연이 누적됨). 실패한 장은 건너뜀(기존과 동일).
+    const photos = (
+      await Promise.all(
+        refs.map(async (r) => {
+          const dl = await sb.storage.from(PHOTO_BUCKET).download(r.path);
+          if (dl.error || !dl.data) return null;
+          return { filename: r.filename, bytes: new Uint8Array(await dl.data.arrayBuffer()) };
+        }),
+      )
+    ).filter((p) => p !== null);
     sent = photos.length === 0 ? true : await sendPhotoRelayMail({ ...info, photos });
   } catch (e) {
     console.error("증빙사진 릴레이 실패:", e);

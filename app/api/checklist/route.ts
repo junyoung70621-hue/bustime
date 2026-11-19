@@ -5,6 +5,7 @@
 // 쓰기는 service_role 키로만(서버 전용).
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { getSupabase, orIlike } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
@@ -139,41 +140,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
   }
 
-  // 수도권/인천 체크리스트는 캡쳐(JPG)를 공개 버킷에 올려 Teams 스레드 인라인 이미지용 공개 URL 확보(실패해도 비차단).
-  const inlineThread = variant === "default" || variant === "incheon";
-  const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, id, relayBytes) : "";
+  // DB 저장 완료 → 사용자에겐 바로 응답하고, Teams 릴레이(캡처·메일·증빙사진)는 응답 후 백그라운드로.
+  //   릴레이 함수들은 실패해도 throw하지 않고, 사진 임시본은 릴레이 성공 시에만 삭제(기존과 동일).
+  waitUntil(
+    (async () => {
+      const t0 = Date.now();
+      // 수도권/인천 체크리스트는 캡쳐(JPG)를 공개 버킷에 올려 Teams 스레드 인라인 이미지용 공개 URL 확보(실패해도 비차단).
+      const inlineThread = variant === "default" || variant === "incheon";
+      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, id, relayBytes) : "";
 
-  // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
-  // 수도권/인천 체크리스트는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
-  //   둘째 줄 "IMG:<공개URL>" → 플로우 B가 추출해 <img>로 인라인 게시.
-  const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
-  await sendRelayMail({
-    subject: `대폐차|${center}|${operator}|${installDate}`,
-    text:
-      caption +
-      (captureUrl ? `IMG:${captureUrl}\n` : "") +
-      `${docName}\n` +
-      `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
-      `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
-      `설치자: ${String(meta.installer_name ?? "")}\nID: ${id}`,
-    fileName: relayName,
-    pdf: relayBytes,
-    contentType: hasJpg ? "image/jpeg" : "application/pdf",
-    action: "created",
-  });
+      // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
+      // 수도권/인천 체크리스트는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
+      //   둘째 줄 "IMG:<공개URL>" → 플로우 B가 추출해 <img>로 인라인 게시.
+      const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
+      await sendRelayMail({
+        subject: `대폐차|${center}|${operator}|${installDate}`,
+        text:
+          caption +
+          (captureUrl ? `IMG:${captureUrl}\n` : "") +
+          `${docName}\n` +
+          `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
+          `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
+          `설치자: ${String(meta.installer_name ?? "")}\nID: ${id}`,
+        fileName: relayName,
+        pdf: relayBytes,
+        contentType: hasJpg ? "image/jpeg" : "application/pdf",
+        action: "created",
+      });
 
 
-  // 증빙사진 릴레이(수도권·인천) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
-  // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.
-  // 인천도 수도권 트리의 "인천" 센터 폴더로 동일하게 보관된다.
-  if (variant === "default" || variant === "incheon") {
-    await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
-      center,
-      operator,
-      vehicleNo: vehNo,
-      installDate,
-    });
-  }
+      // 증빙사진 릴레이(수도권·인천) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
+      // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.
+      // 인천도 수도권 트리의 "인천" 센터 폴더로 동일하게 보관된다.
+      if (variant === "default" || variant === "incheon") {
+        await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+          center,
+          operator,
+          vehicleNo: vehNo,
+          installDate,
+        });
+      }
+      console.log(`[checklist POST] 릴레이 완료 ${Date.now() - t0}ms id=${id}`);
+    })().catch((e) => console.error("[checklist POST] 릴레이 오류:", e)),
+  );
 
   return NextResponse.json({ id: data.id });
 }

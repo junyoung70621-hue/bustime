@@ -7,7 +7,7 @@
 //   사진은 모달 state로 보유 → 저장 시 압축해 메일 릴레이(Teams)로 전송.
 // ─────────────────────────────────────────────────────────────
 import { useState } from "react";
-import type { PhotoSlot } from "@/lib/daepyecha/photo";
+import { compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
 
 export default function PhotoStep({
   photos,
@@ -20,7 +20,21 @@ export default function PhotoStep({
 }) {
   // 예시사진 오버레이(슬롯 인덱스 = /photo-examples/<i>.jpg)
   const [example, setExample] = useState<number | null>(null);
-  const setFile = (i: number, file: File | null) => {
+  // 촬영 즉시 1600px JPEG로 축소 — 원본(12MP·수 MB) 8장을 썸네일로 디코딩하면 폰 메모리가 터져 느려짐.
+  //   저장 시에는 이미 축소된 파일을 그대로 업로드(재압축 없음).
+  const [busy, setBusy] = useState<Set<number>>(new Set());
+  const setFile = async (i: number, raw: File | null) => {
+    let file = raw;
+    if (raw) {
+      setBusy((b) => new Set(b).add(i));
+      const blob = await compressImage(raw, 1600, 0.7);
+      file = blob === raw ? raw : new File([blob], `${i}.jpg`, { type: "image/jpeg" });
+      setBusy((b) => {
+        const n = new Set(b);
+        n.delete(i);
+        return n;
+      });
+    }
     setPhotos((prev) =>
       prev.map((s, idx) => {
         if (idx !== i) return s;
@@ -76,7 +90,11 @@ export default function PhotoStep({
               </div>
             </div>
 
-            {s.na ? (
+            {busy.has(i) ? (
+              <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 text-sm text-slate-400">
+                처리 중…
+              </div>
+            ) : s.na ? (
               <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 text-sm text-slate-400">
                 없음
               </div>
@@ -118,10 +136,10 @@ export default function PhotoStep({
 
       <button
         onClick={onNext}
-        disabled={done < photos.length}
+        disabled={done < photos.length || busy.size > 0}
         className="h-12 w-full rounded-xl bg-brand-600 font-bold text-white disabled:opacity-40"
       >
-        {done < photos.length ? `촬영 남음 ${photos.length - done}칸 (촬영 또는 없음 체크)` : "체크리스트 작성 →"}
+        {busy.size > 0 ? "사진 처리 중…" : done < photos.length ? `촬영 남음 ${photos.length - done}칸 (촬영 또는 없음 체크)` : "체크리스트 작성 →"}
       </button>
 
       {/* 예시사진 오버레이(탭하면 닫힘) */}

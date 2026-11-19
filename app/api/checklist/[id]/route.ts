@@ -6,6 +6,7 @@
 //   PATCH  : 복원
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { getSupabase } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
@@ -114,43 +115,51 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await sb!.storage.from(BUCKET).remove([newPath]);
     return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
   }
-  // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
-  if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
+  // DB 저장 완료 → 사용자에겐 바로 응답하고, Teams 릴레이(캡처·메일·증빙사진)는 응답 후 백그라운드로.
+  //   릴레이 함수들은 실패해도 throw하지 않고, 사진 임시본은 릴레이 성공 시에만 삭제(기존과 동일).
+  waitUntil(
+    (async () => {
+      const t0 = Date.now();
+      // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
+      if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
 
-  // 수도권/인천 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
-  const inlineThread = variant === "default" || variant === "incheon";
-  const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
+      // 수도권/인천 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
+      const inlineThread = variant === "default" || variant === "incheon";
+      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
 
-  // Teams 자동 업로드(이메일 릴레이) — 수정본.
-  // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
-  //   수도권/인천은 캡션(첫 줄)+IMG 줄을 넣어 스레드 게시/인라인 이미지가 신규와 동일하게 동작.
-  const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
-  await sendRelayMail({
-    subject: `대폐차|${center}|${operator}|${installDate}`,
-    text:
-      caption +
-      (captureUrl ? `IMG:${captureUrl}\n` : "") +
-      `${docName} (수정본)\n` +
-      `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
-      `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
-      `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
-    fileName: relayName,
-    pdf: relayBytes,
-    contentType: hasJpg ? "image/jpeg" : "application/pdf",
-    action: "updated",
-    replaceFile: cur.teams_file ?? undefined,
-  });
+      // Teams 자동 업로드(이메일 릴레이) — 수정본.
+      // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
+      //   수도권/인천은 캡션(첫 줄)+IMG 줄을 넣어 스레드 게시/인라인 이미지가 신규와 동일하게 동작.
+      const caption = inlineThread ? `${operator}_${vehNo}_대폐차_${installDate} 설치완료\n` : "";
+      await sendRelayMail({
+        subject: `대폐차|${center}|${operator}|${installDate}`,
+        text:
+          caption +
+          (captureUrl ? `IMG:${captureUrl}\n` : "") +
+          `${docName} (수정본)\n` +
+          `센터: ${center}\n운수사: ${operator}\n모델: ${String(meta.model ?? "")}\n` +
+          `설치일: ${installDate}\n차량: ${String(meta.vehicle_numbers ?? "")}\n` +
+          `설치자: ${String(meta.installer_name ?? "")}\nID: ${params.id}`,
+        fileName: relayName,
+        pdf: relayBytes,
+        contentType: hasJpg ? "image/jpeg" : "application/pdf",
+        action: "updated",
+        replaceFile: cur.teams_file ?? undefined,
+      });
 
 
-  // 증빙사진 재첨부(수도권·인천) — 수정 시 사진을 다시 올린 경우에만 동작.
-  if (variant === "default" || variant === "incheon") {
-    await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
-      center,
-      operator,
-      vehicleNo: vehNo,
-      installDate,
-    });
-  }
+      // 증빙사진 재첨부(수도권·인천) — 수정 시 사진을 다시 올린 경우에만 동작.
+      if (variant === "default" || variant === "incheon") {
+        await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+          center,
+          operator,
+          vehicleNo: vehNo,
+          installDate,
+        });
+      }
+      console.log(`[checklist PUT] 릴레이 완료 ${Date.now() - t0}ms id=${params.id}`);
+    })().catch((e) => console.error("[checklist PUT] 릴레이 오류:", e)),
+  );
 
   return NextResponse.json({ id: params.id });
 }
