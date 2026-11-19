@@ -11,7 +11,7 @@ import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import { emptyPhotoSlots, uploadPhotosDirect, type PhotoSlot } from "@/lib/daepyecha/photo";
 import type { PhotoRef } from "@/lib/daepyecha/photo-upload";
 import PhotoStep from "./PhotoStep";
-import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor } from "@/lib/checklist/templates";
+import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor, operatorFullName } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
 
 // 활성 점검행: 태그리스면 공통 태그리스 양식, 아니면 선택 모델 점검표
@@ -159,7 +159,7 @@ export default function ChecklistModal({
 
       const meta = {
         center: data.center,
-        operator: data.tagless ? `(태그리스)${data.operatorName}` : data.operatorName,
+        operator: data.tagless ? `(태그리스)${operatorFullName(data)}` : operatorFullName(data),
         model: data.model,
         install_date: data.installDate,
         vehicle_numbers: data.vehicleNo,
@@ -290,8 +290,32 @@ export default function ChecklistModal({
                     <button type="button" onClick={() => patch({ installTime: nowTime() })} className={nowBtn}>NOW</button>
                   </div>
                 </L>
-                <L t="운수사명"><input value={data.operatorName} onChange={(e) => patch({ operatorName: e.target.value })} className={inp} /></L>
+                <L t="운수사명"><input value={data.operatorName} onChange={(e) => patch({ operatorName: e.target.value })} placeholder="예: 대진여객" className={inp} /></L>
                 <L t="운수사ID"><input value={data.operatorId} onChange={(e) => patch({ operatorId: e.target.value })} className={inp} /></L>
+                <div className="col-span-2">
+                  {/* L(<label>) 안에 버튼을 두면 라벨/접미사 클릭 시 첫 버튼(본사)이 눌림 → div 사용 */}
+                  <span className="mb-1 block text-xs font-semibold text-slate-600">본사 / 영업소</span>
+                    <div className="flex gap-2">
+                      <div className="flex shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200">
+                        {(["본사", "영업소"] as const).map((o) => (
+                          <button key={o} type="button" onClick={() => patch({ officeType: o })} className={`h-11 px-3 text-sm font-bold transition ${(data.officeType ?? "본사") === o ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>{o}</button>
+                        ))}
+                      </div>
+                      {data.officeType === "영업소" && (
+                        <div className="flex flex-1 items-center gap-1">
+                          <input value={data.officeName ?? ""} onChange={(e) => patch({ officeName: e.target.value })} placeholder="예: 정릉" className={inp} />
+                          <span className="shrink-0 text-sm font-semibold text-slate-600">영업소</span>
+                        </div>
+                      )}
+                    </div>
+                  {data.officeType === "영업소" && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {(data.officeName ?? "").trim()
+                        ? <>표기: <b>{operatorFullName(data)}</b></>
+                        : <>작성예시: 운수사명 <b>대진여객</b> + 영업소 <b>정릉</b> 입력 → <b>대진여객 정릉영업소</b></>}
+                    </p>
+                  )}
+                </div>
                 <L t="노선번호"><input value={data.routeNo} onChange={(e) => patch({ routeNo: e.target.value })} className={inp} /></L>
                 <L t="차량번호"><input value={data.vehicleNo} onChange={(e) => patch({ vehicleNo: e.target.value })} placeholder="예: 70-1234" className={inp} /></L>
                 <L t="좌석수"><input value={data.seatCount} onChange={(e) => patch({ seatCount: e.target.value })} inputMode="numeric" className={inp} /></L>
@@ -522,6 +546,7 @@ function firstMissing(d: CkFormState): string | null {
     [!d.center, "센터"],
     [!d.model, "모델"],
     [!d.operatorName.trim(), "운수사명"],
+    [d.officeType === "영업소" && !(d.officeName ?? "").replace(/영업소$/, "").trim(), "영업소명"],
     [!d.operatorId.trim(), "운수사ID"],
     [!d.installDate, "설치일"],
     [!d.installTime.trim(), "설치시간"],

@@ -76,6 +76,8 @@ export type CkFormState = {
   driverIH: string; // 운전자단말기 IH (운전자 계열: B600/B620/한강셔틀)
   operatorName: string; // 운수사명
   operatorId: string; // 운수사ID
+  officeType?: "본사" | "영업소"; // 미지정(구 데이터)=본사
+  officeName?: string; // 영업소명("정릉" → "정릉영업소")
   // 승.하차단말기 IH (승차 / 하차1 / 하차2)
   seungChaIH: string;
   hacha1IH: string;

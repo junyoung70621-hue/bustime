@@ -50,6 +50,13 @@ export function presetFor(model: string): Partial<CkFormState> {
 }
 
 /** 빈 폼 상태 생성 */
+// 운수사명 + 영업소 → "대진여객 정릉영업소" (본사면 운수사명 그대로)
+export function operatorFullName(d: Pick<CkFormState, "operatorName" | "officeType" | "officeName">): string {
+  const name = d.operatorName.trim();
+  const office = (d.officeName ?? "").trim().replace(/영업소$/, "").trim();
+  return d.officeType === "영업소" && office ? `${name} ${office}영업소` : name;
+}
+
 export function emptyCkForm(today: string): CkFormState {
   return {
     center: "",
@@ -70,6 +77,8 @@ export function emptyCkForm(today: string): CkFormState {
     driverIH: "",
     operatorName: "",
     operatorId: "",
+    officeType: "본사",
+    officeName: "",
     seungChaIH: "",
     hacha1IH: "",
     hacha2IH: "",

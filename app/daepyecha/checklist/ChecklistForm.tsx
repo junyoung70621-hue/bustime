@@ -6,7 +6,7 @@
 //   8열: 번호·케이스명·점검대상·점검항목·점검방법(아이콘)·점검POINT·O/X시간·비고
 //   html2canvas 안전: table + rowspan + inline-block.
 // ─────────────────────────────────────────────────────────────
-import { CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_CHECK_KEY, rowCheckKey, rowCheckActive, controllingCheckIndex, modelFamily, hasSeunghacha, hasSeunghachaModule } from "@/lib/checklist/templates";
+import { CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_CHECK_KEY, rowCheckKey, rowCheckActive, controllingCheckIndex, modelFamily, hasSeunghacha, hasSeunghachaModule, operatorFullName } from "@/lib/checklist/templates";
 import type { CkFormState, CkRowDef, CkCellKey } from "@/lib/checklist/types";
 
 const c = "border border-slate-700 px-1.5 py-1 align-middle";
@@ -163,7 +163,7 @@ function PyochulHeader({ data }: { data: CkFormState }) {
           <td className={`${labCell} w-[11%]`}>설치일</td>
           <td className={`${cMid} w-[18%]`}>{fmtDate(data.installDate)}</td>
           <td className={`${labCell} w-[15%]`}>운수사명 / 운수사ID</td>
-          <td className={`${cMid} w-[20%]`}>{data.operatorName} / {data.operatorId}</td>
+          <td className={`${cMid} w-[20%]`}>{operatorFullName(data)} / {data.operatorId}</td>
           <td className={`${labCell} w-[12%]`} rowSpan={2}>운수사 확인</td>
           <td className={cMid} rowSpan={2}><SealStack name={data.operatorSignerName} sig={data.operatorSig} /></td>
         </tr>
@@ -227,7 +227,7 @@ function DriverHeader({ data }: { data: CkFormState }) {
           <td className={`${labCell} w-[12%]`}>설치일</td>
           <td className={`${cMid} w-[22%]`}>{fmtDate(data.installDate)}</td>
           <td className={`${labCell} w-[14%]`}>운수사명</td>
-          <td className={`${cMid} w-[20%]`}>{data.operatorName}</td>
+          <td className={`${cMid} w-[20%]`}>{operatorFullName(data)}</td>
           <td className={`${labCell} w-[12%]`} rowSpan={2}>운수사 확인</td>
           <td className={cMid} rowSpan={2}><SealStack name={data.operatorSignerName} sig={data.operatorSig} /></td>
         </tr>
@@ -268,7 +268,7 @@ function TaglessHeader({ data }: { data: CkFormState }) {
           <td className={`${labCell} w-[12%]`}>설치일</td>
           <td className={`${cMid} w-[20%]`}>{fmtDate(data.installDate)}</td>
           <td className={`${labCell} w-[14%]`}>운수사명</td>
-          <td className={`${cMid} w-[20%]`}>{data.operatorName}</td>
+          <td className={`${cMid} w-[20%]`}>{operatorFullName(data)}</td>
           <td className={`${labCell} w-[12%]`} rowSpan={2}>설치자 확인</td>
           <td className={cMid} rowSpan={2}><SealStack name={data.installerName} sig={data.installerSig} /></td>
         </tr>
