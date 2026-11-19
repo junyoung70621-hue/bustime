@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { compressImage, type PhotoSlot } from "@/lib/daepyecha/photo";
 
+import Icon from "@/components/Icon";
 export default function PhotoStep({
   photos,
   setPhotos,
@@ -58,9 +59,9 @@ export default function PhotoStep({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
-        <p className="text-sm font-bold text-sky-800">증빙사진 촬영 ({done}/{photos.length})</p>
-        <p className="mt-1 text-xs text-sky-700">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-sm font-bold text-slate-800">증빙사진 촬영 ({done}/{photos.length})</p>
+        <p className="mt-1 text-xs text-slate-700">
           증빙 보관용입니다. <b>모든 칸을 촬영해야</b> 다음으로 진행됩니다. 해당 장비가 없는 경우에만 <b>없음</b>을 체크하세요.
         </p>
       </div>
@@ -79,7 +80,7 @@ export default function PhotoStep({
                 <button
                   type="button"
                   onClick={() => setExample(i)}
-                  className="rounded bg-sky-100 px-1.5 py-0.5 text-xs font-bold text-sky-700"
+                  className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700"
                 >
                   예시
                 </button>
@@ -117,7 +118,7 @@ export default function PhotoStep({
               </div>
             ) : (
               <label className="flex h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-brand-500 hover:text-brand-600">
-                <span className="text-2xl">📷</span>
+                <Icon name="camera" className="h-7 w-7" />
                 <span className="text-xs font-semibold">촬영 / 선택</span>
                 <input
                   type="file"
@@ -139,7 +140,7 @@ export default function PhotoStep({
         disabled={done < photos.length || busy.size > 0}
         className="h-12 w-full rounded-xl bg-brand-600 font-bold text-white disabled:opacity-40"
       >
-        {busy.size > 0 ? "사진 처리 중…" : done < photos.length ? `촬영 남음 ${photos.length - done}칸 (촬영 또는 없음 체크)` : "체크리스트 작성 →"}
+        {busy.size > 0 ? "사진 처리 중…" : done < photos.length ? `촬영 남음 ${photos.length - done}칸 (촬영 또는 없음 체크)` : "체크리스트 작성"}
       </button>
 
       {/* 예시사진 오버레이(탭하면 닫힘) */}
@@ -148,7 +149,7 @@ export default function PhotoStep({
           className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-2 bg-black/80 p-4"
           onClick={() => setExample(null)}
         >
-          <p className="text-sm font-bold text-white">예시 — {photos[example].label}</p>
+          <p className="text-sm font-bold text-white">예시: {photos[example].label}</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`/photo-examples/${example}.jpg`} alt={`${photos[example].label} 예시`} className="max-h-[80dvh] w-auto max-w-full rounded-xl object-contain" />
           <p className="text-xs text-white/70">화면을 탭하면 닫힙니다</p>

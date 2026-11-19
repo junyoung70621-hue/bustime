@@ -78,15 +78,15 @@ export default function Step1Input({
       </div>
 
       {/* 태그리스(비콘/BLE) 자재 양식 토글 — 체크 시 품목이 태그리스 자재로 전환 */}
-      <label className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5">
+      <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
         <input
           type="checkbox"
           checked={data.tagless}
           onChange={(e) => onToggleTagless(e.target.checked)}
           className="h-4 w-4 shrink-0"
         />
-        <span className="text-sm font-bold text-indigo-700">태그리스 자재로 작성</span>
-        <span className="text-xs text-indigo-500">(비콘/허브/케이블)</span>
+        <span className="text-sm font-bold text-slate-700">태그리스 자재로 작성</span>
+        <span className="text-xs text-slate-500">(비콘/허브/케이블)</span>
       </label>
 
       <Field label="운수사 / 구분">
@@ -159,7 +159,7 @@ export default function Step1Input({
       {data.items.length > 0 ? (
         <div className="rounded-xl border border-slate-200">
           <p className="border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-600">
-            품목 ({data.items.length}) —{" "}
+            품목 ({data.items.length}):{" "}
             {data.tagless ? "대당 기본수량 × 대수 자동 입력, 수정 가능" : "수량은 대수로 자동 입력, 수정 가능"}
           </p>
           <ul className="flex flex-col divide-y divide-slate-100">

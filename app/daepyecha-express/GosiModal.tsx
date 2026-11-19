@@ -13,6 +13,7 @@ import type { GosiForm, GosiItem, GosiPurpose, GosiRow } from "@/lib/gosi/types"
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 import GosiForm_ from "./GosiForm";
 
+import Icon from "@/components/Icon";
 function todayStr() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -108,7 +109,7 @@ export default function GosiModal({
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">{isEdit ? "설치확인서 수정 (고속/시외)" : "증·대폐차 설치확인서 (고속/시외)"}</h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
@@ -162,7 +163,7 @@ export default function GosiModal({
                       <label className="flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-600">
                         <input type="checkbox" checked={it.done} onChange={(e) => setItem(i, { done: e.target.checked })} className="h-4 w-4" />완료
                       </label>
-                      {it.custom && <button type="button" onClick={() => removeItem(i)} className="shrink-0 text-xs font-bold text-red-500">✕</button>}
+                      {it.custom && <button type="button" onClick={() => removeItem(i)} aria-label="항목 삭제" className="grid h-8 w-8 shrink-0 place-items-center text-red-500"><Icon name="close" className="h-4 w-4" /></button>}
                     </li>
                   ))}
                 </ul>
@@ -221,7 +222,7 @@ function SignBtn({ label, name, done, onClick }: { label: string; name: string; 
   return (
     <button onClick={onClick} className={`flex w-full flex-col items-start gap-1 rounded-xl border p-3 text-left ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? (name ? `${name} ✓` : "서명 완료 ✓") : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? (name ? `${name} (서명완료)` : "서명 완료") : "사인 입력"}</span>
     </button>
   );
 }

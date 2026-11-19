@@ -24,7 +24,7 @@ export default function RegionalChecklistForm({ data }: { data: RegFormState }) 
     <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
       {data.region ? <div className="mb-1 text-right text-[11px] font-bold text-slate-500">{data.region}</div> : null}
 
-      <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{title}</div>
+      <div className="mb-2 bg-form-head py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{title}</div>
 
       <RegHeader data={data} />
       <p className="mb-2 text-center text-[11px]">

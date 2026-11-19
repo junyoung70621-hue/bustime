@@ -17,6 +17,7 @@ import type { IncFormState, IncRow, VehicleType, OX } from "@/lib/checklist-inch
 import SignaturePad from "../SignaturePad";
 import IncheonChecklistForm from "./IncheonChecklistForm";
 
+import Icon from "@/components/Icon";
 const DRAFT_KEY = "checklist-incheon-draft-v1";
 
 function todayStr() {
@@ -214,7 +215,7 @@ export default function IncheonChecklistModal({
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">{isEdit ? "인천 체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : step === "auto" ? "IH 자동입력" : "인천 설치완료 체크리스트"}</h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
@@ -232,7 +233,7 @@ export default function IncheonChecklistModal({
                   onClick={() => setStep("auto")}
                   className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
                 >
-                  ← IH 자동입력
+                  이전: IH 자동입력
                 </button>
               )}
               {!isEdit && draft && !draftHandled && (
@@ -274,8 +275,8 @@ export default function IncheonChecklistModal({
               {/* IH (선택) */}
               <div className="rounded-xl border border-slate-200 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-bold text-slate-600">단말기 IH <span className="font-normal text-slate-400">— 선택</span></p>
-                  <button type="button" onClick={() => setIhHelp(true)} className="rounded bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-700">설명</button>
+                  <p className="text-sm font-bold text-slate-600">단말기 IH <span className="font-normal text-slate-400">(선택)</span></p>
+                  <button type="button" onClick={() => setIhHelp(true)} className="rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">설명</button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <L t="표출단말기 IH"><input value={data.pyochulIH} onChange={(e) => patch({ pyochulIH: e.target.value })} className={inp} /></L>
@@ -393,7 +394,7 @@ export default function IncheonChecklistModal({
                   disabled={saving}
                   className="h-11 w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-600 disabled:opacity-50"
                 >
-                  {draftSaved ? "임시저장됨 ✓ (다음에 불러올 수 있어요)" : "임시저장 (작성 내용 보관)"}
+                  {draftSaved ? "임시저장됨 (다음에 불러올 수 있어요)" : "임시저장 (작성 내용 보관)"}
                 </button>
               )}
               <div className="flex gap-2 pb-1">
@@ -415,9 +416,9 @@ export default function IncheonChecklistModal({
             <div className="w-full max-w-sm rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-slate-800">단말기 IH 확인방법</p>
-                <button onClick={() => setIhHelp(false)} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+                <button onClick={() => setIhHelp(false)} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
               </div>
-              <p className="mt-2 rounded-lg bg-indigo-50 px-2 py-1.5 text-xs font-semibold text-indigo-700">
+              <p className="mt-2 rounded-lg bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700">
                 설정 &gt; 설정 &gt; 1472 관리자 모드 진입
               </p>
               <ul className="mt-2 flex flex-col gap-1.5">
@@ -479,7 +480,7 @@ function SignBtn({ label, name, done, onClick }: { label: string; name: string; 
   return (
     <button onClick={onClick} className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? `${name} ✓` : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? `${name} (서명완료)` : "사인 입력"}</span>
     </button>
   );
 }

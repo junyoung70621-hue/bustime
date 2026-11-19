@@ -152,7 +152,7 @@ export default function RegionalJajaeList() {
             <button onClick={() => act("/api/daepyecha/trash?variant=regional", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 ring-1 ring-red-200">휴지통 비우기</button>
           )}
           <button onClick={() => setTrashed((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${trashed ? "bg-slate-700 text-white ring-slate-700" : "bg-white text-slate-500 ring-slate-200"}`}>
-            {trashed ? "← 목록으로" : "🗑 휴지통"}
+            {trashed ? "목록으로" : "휴지통"}
           </button>
         </div>
       </div>

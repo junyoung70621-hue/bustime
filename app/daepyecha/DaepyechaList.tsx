@@ -234,7 +234,7 @@ export default function DaepyechaList() {
                 : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
             }`}
           >
-            {trashed ? "← 목록으로" : "🗑 휴지통"}
+            {trashed ? "목록으로" : "휴지통"}
           </button>
         </div>
       </div>
@@ -266,7 +266,7 @@ export default function DaepyechaList() {
                       {r.purpose}
                     </span>
                     {r.tagless && (
-                      <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                      <span className="rounded-md bg-slate-50 px-2 py-0.5 text-xs font-bold text-slate-700">
                         태그리스
                       </span>
                     )}

@@ -140,7 +140,7 @@ function SignButton({
     >
       <span className="text-xs font-semibold text-slate-500">{label}</span>
       <span className="text-sm font-bold text-slate-800">
-        {done ? `${name} ✓ 서명완료` : "✍ 사인 입력"}
+        {done ? `${name} (서명완료)` : "사인 입력"}
       </span>
     </button>
   );

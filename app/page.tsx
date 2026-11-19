@@ -93,7 +93,7 @@ export default function Home() {
       {/* 알림: 인증 대기 (이미지의 분홍 안내박스 톤) */}
       {notice && (
         <div className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-center text-sm font-medium text-brand-700">
-          ⏳ {notice}
+          {notice}
         </div>
       )}
 
@@ -108,7 +108,7 @@ export default function Home() {
       {results.length > 1 && (
         <section>
           <h2 className="mb-2 px-1 text-sm font-semibold text-slate-500">
-            매칭된 차량 {results.length}대 — 선택하세요
+            매칭된 차량 {results.length}대, 하나를 선택하세요
           </h2>
           <ul className="flex flex-col gap-2">
             {results.map((r) => {
@@ -319,7 +319,7 @@ function EtaCard({ r }: { r: SearchResult }) {
 
       {r.etaUnknown && (
         <p className="bg-amber-50 px-6 py-3 text-xs text-amber-700">
-          ⚠ 이 노선의 종점 정류장 정보가 아직 수집되지 않아 ETA를 계산할 수 없습니다.
+          이 노선의 종점 정류장 정보가 아직 수집되지 않아 ETA를 계산할 수 없습니다.
           현재 위치(구간 {r.currentSeq})는 실시간으로 확인됩니다.
         </p>
       )}
@@ -402,7 +402,7 @@ function StationList({
       <p className="flex items-center justify-between px-6 pt-3 text-xs font-semibold text-slate-500">
         <span>정류장 ({stations.length}개)</span>
         {runningCount > 0 ? (
-          <span className="text-emerald-600">🚍 운행 중 {runningCount}대</span>
+          <span className="text-emerald-600">운행 중 {runningCount}대</span>
         ) : (
           <span className="text-slate-300">위치신호 없음</span>
         )}
@@ -437,7 +437,7 @@ function StationList({
                           : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
                       }`}
                     >
-                      🚍{rv.tail}
+                      {rv.tail}
                     </span>
                   ))}
                 </span>
@@ -487,7 +487,7 @@ function EtaSourceBadge({ source }: { source: SearchResult["etaSource"] }) {
     return (
       <span
         className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 ring-1 ring-emerald-200"
-        title="종점 도착정보 API의 실측 예측(교통상황 반영) — 서울버스정보 수준"
+        title="종점 도착정보 API의 실측 예측(교통상황 반영), 서울버스정보 수준"
       >
         실시간 예측
       </span>
@@ -496,7 +496,7 @@ function EtaSourceBadge({ source }: { source: SearchResult["etaSource"] }) {
   return (
     <span
       className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200"
-      title="정류장 수 × 평균 소요시간 추정 — 종점에서 멀어 실측 도착정보에 잡히지 않는 경우"
+      title="정류장 수 × 평균 소요시간 추정(종점에서 멀어 실측 도착정보에 잡히지 않는 경우)"
     >
       추정
     </span>
@@ -562,7 +562,7 @@ function FrontCar({
         </p>
         <p className="mt-1 flex flex-wrap items-baseline gap-2">
           <span className="rounded-lg bg-amber-100 px-2.5 py-1 text-lg font-extrabold tabular-nums text-amber-700 ring-1 ring-amber-200">
-            🚌 {tail}
+            {tail}
           </span>
           {(at || gapLabel) && (
             <span className="text-xs font-semibold text-slate-400">
@@ -591,7 +591,7 @@ function FrontCar({
         className="rounded bg-slate-100 px-1.5 py-0.5 font-bold tabular-nums text-slate-600 ring-1 ring-slate-200"
         title={[gapLabel, live ? "실시간" : at ? `${at} 기준` : ""].filter(Boolean).join(" · ")}
       >
-        🚌{tail}
+        {tail}
       </span>
       <span className="text-[11px] font-normal text-slate-300">정확하지 않을 수 있음</span>
     </p>

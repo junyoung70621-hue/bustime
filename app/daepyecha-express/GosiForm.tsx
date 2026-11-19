@@ -17,7 +17,7 @@ const chk = (on: boolean) => (on ? "☑" : "□");
 export default function GosiForm({ data }: { data: GosiForm }) {
   return (
     <div className="w-[794px] bg-white px-10 py-8 text-[12px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
-      <div className="mb-4 bg-[#22324a] py-3 text-center text-xl font-extrabold tracking-wide text-white">증·대폐차 설치확인서</div>
+      <div className="mb-4 bg-form-head py-3 text-center text-xl font-extrabold tracking-wide text-white">증·대폐차 설치확인서</div>
 
       {/* 헤더 정보 */}
       <table className="mb-3 w-full border-collapse text-[12px]">

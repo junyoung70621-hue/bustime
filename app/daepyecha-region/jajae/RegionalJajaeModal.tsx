@@ -17,6 +17,7 @@ import { itemVariants, firstUnselectedVariant } from "@/lib/daepyecha/templates"
 import ConfirmationForm from "@/app/daepyecha/ConfirmationForm";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 
+import Icon from "@/components/Icon";
 // FormState 와 동일하되 model=지역 기종(B400/B500/B600/B650), center=지역(대전/세종/김해 등)
 type RegForm = Omit<FormState, "model" | "center"> & { model: RegJajaeModel | ""; center: Region | "" };
 
@@ -200,9 +201,9 @@ export default function RegionalJajaeModal({
       <div className="safe-bottom flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">
-            {isEdit ? "확인서 수정 (지역)" : "자재 지급확인서 (지역)"} — {step === "input" ? "기본 정보" : "서명"}
+            {isEdit ? "확인서 수정 (지역)" : "자재 지급확인서 (지역)"}: {step === "input" ? "기본 정보" : "서명"}
           </h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
         <div className="overflow-y-auto px-5 py-4">
           {loading ? (
@@ -263,7 +264,7 @@ export default function RegionalJajaeModal({
 
               {data.items.length > 0 ? (
                 <div className="rounded-xl border border-slate-200">
-                  <p className="border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-600">품목 ({data.items.length}) — 수량은 대수로 자동 입력, 수정 가능</p>
+                  <p className="border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-600">품목 ({data.items.length}): 수량은 대수로 자동 입력, 수정 가능</p>
                   <ul className="flex flex-col divide-y divide-slate-100">
                     {data.items.map((it, i) => {
                       const variantOpts = itemVariants(it.name);
@@ -362,7 +363,7 @@ function SignButton({ label, name, done, onClick }: { label: string; name: strin
   return (
     <button onClick={onClick} className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white hover:bg-slate-50"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? `${name} ✓ 서명완료` : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? `${name} (서명완료)` : "사인 입력"}</span>
     </button>
   );
 }

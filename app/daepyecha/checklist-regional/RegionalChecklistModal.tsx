@@ -14,6 +14,7 @@ import type { CkRowDef, OX } from "@/lib/checklist/types";
 import SignaturePad from "../SignaturePad";
 import RegionalChecklistForm from "./RegionalChecklistForm";
 
+import Icon from "@/components/Icon";
 function todayStr() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -132,7 +133,7 @@ export default function RegionalChecklistModal({
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정 (지역)" : "설치 완료 체크리스트 (지역)"}</h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
@@ -174,7 +175,7 @@ export default function RegionalChecklistModal({
               {cfg && (
                 <div className="rounded-xl border border-slate-200 p-3">
                   <p className="mb-2 text-sm font-bold text-slate-600">
-                    {cfg.beforeAfter ? "교체전 ID/IH" : "단말기 ID/IH"} <span className="font-normal text-slate-400">— 선택</span>
+                    {cfg.beforeAfter ? "교체전 ID/IH" : "단말기 ID/IH"} <span className="font-normal text-slate-400">(선택)</span>
                   </p>
                   <span className="mb-1 block text-xs font-semibold text-slate-600">{cfg.idLabel} (승차 / 하차1 / 하차2)</span>
                   <div className="flex gap-1">
@@ -189,7 +190,7 @@ export default function RegionalChecklistModal({
               {/* 교체후 ID/IH (B600, 선택) */}
               {cfg?.beforeAfter && (
                 <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="mb-2 text-sm font-bold text-slate-600">교체후 ID/IH <span className="font-normal text-slate-400">— 선택</span></p>
+                  <p className="mb-2 text-sm font-bold text-slate-600">교체후 ID/IH <span className="font-normal text-slate-400">(선택)</span></p>
                   <span className="mb-1 block text-xs font-semibold text-slate-600">{cfg.idLabel} (승차 / 하차1 / 하차2)</span>
                   <div className="flex gap-1">
                     <input value={data.seungChaAfter} onChange={(e) => patch({ seungChaAfter: e.target.value })} placeholder="승차" className={inp} />
@@ -203,7 +204,7 @@ export default function RegionalChecklistModal({
               {/* F/W 버전 (B500/B650, 선택) */}
               {cfg?.fwRow && (
                 <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="mb-2 text-sm font-bold text-slate-600">F/W 버전 <span className="font-normal text-slate-400">— 선택</span></p>
+                  <p className="mb-2 text-sm font-bold text-slate-600">F/W 버전 <span className="font-normal text-slate-400">(선택)</span></p>
                   <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차1,하차2 단말기 F/W (승차 / 하차1 / 하차2)</span>
                   <div className="flex gap-1">
                     <input value={data.seungChaFw} onChange={(e) => patch({ seungChaFw: e.target.value })} placeholder="승차" className={inp} />
@@ -344,7 +345,7 @@ function SignBtn({ label, name, done, onClick }: { label: string; name: string; 
   return (
     <button onClick={onClick} className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? `${name} ✓` : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? `${name} (서명완료)` : "사인 입력"}</span>
     </button>
   );
 }

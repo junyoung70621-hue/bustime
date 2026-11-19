@@ -20,6 +20,8 @@ const config: Config = {
         },
         // 연한 라벤더-그레이 캔버스
         canvas: "#F4F3F8",
+        // PDF 서식 제목줄 남색(공식 양식 색 그대로)
+        "form-head": "#22324a",
       },
       boxShadow: {
         card: "0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06)",

@@ -139,7 +139,7 @@ export default function GosiList() {
             <button onClick={() => act("/api/checklist/trash?variant=gosi", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">비우기</button>
           )}
           <button onClick={() => setTrashed((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${trashed ? "bg-slate-800 text-white ring-slate-800" : "bg-white text-slate-500 ring-slate-200"}`}>
-            {trashed ? "← 목록" : "🗑 휴지통"}
+            {trashed ? "목록" : "휴지통"}
           </button>
         </div>
       </div>

@@ -22,7 +22,7 @@ export default function GongyongForm({ data }: { data: GongyongForm }) {
     <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
       {data.region ? <div className="mb-1 text-right text-[11px] font-bold text-slate-500">{data.region}</div> : null}
 
-      <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">설치 확인서</div>
+      <div className="mb-2 bg-form-head py-2.5 text-center text-xl font-extrabold tracking-wide text-white">설치 확인서</div>
 
       <div className="mb-2 text-[12px] font-bold">■ 설치확인일자 : {fmtDate(data.installDate)}</div>
 
@@ -141,7 +141,7 @@ function PohangForm({ data }: { data: GongyongForm }) {
   return (
     <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
       <div className="mb-1 text-right text-[11px] font-bold text-slate-500">포항</div>
-      <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{docWord} 확인서</div>
+      <div className="mb-2 bg-form-head py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{docWord} 확인서</div>
       <div className="mb-2 text-[12px] font-bold">■ {docWord}확인일자 : {fmtDate(data.installDate)}</div>
 
       <table className="mb-2 w-full border-collapse text-[11px]">

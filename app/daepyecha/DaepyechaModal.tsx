@@ -14,6 +14,7 @@ import type { ConfirmationRow, FormState, Model, NewReused } from "@/lib/daepyec
 import Step1Input from "./Step1Input";
 import Step2Sign from "./Step2Sign";
 
+import Icon from "@/components/Icon";
 function todayStr(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -213,10 +214,10 @@ export default function DaepyechaModal({
       <div className="safe-bottom flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">
-            {isEdit ? "확인서 수정" : "대폐차 확인서"} — {step === "input" ? "기본 정보" : "서명"}
+            {isEdit ? "확인서 수정" : "대폐차 확인서"}: {step === "input" ? "기본 정보" : "서명"}
           </h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">
-            ✕
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600">
+            <Icon name="close" />
           </button>
         </div>
         <div className="overflow-y-auto px-5 py-4">

@@ -18,7 +18,7 @@ export default function IncheonChecklistForm({ data }: { data: IncFormState }) {
     <div className="w-[840px] bg-white px-7 py-6 text-[11px] text-slate-900" style={{ fontFamily: "var(--font-noto), 'Malgun Gothic', sans-serif" }}>
       <div className="mb-1 text-right text-[11px] font-bold text-slate-500">인천</div>
 
-      <div className="mb-2 bg-[#22324a] py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{INC_TITLE}</div>
+      <div className="mb-2 bg-form-head py-2.5 text-center text-xl font-extrabold tracking-wide text-white">{INC_TITLE}</div>
 
       <Header data={data} />
       <p className="mb-2 text-center text-[11px]">

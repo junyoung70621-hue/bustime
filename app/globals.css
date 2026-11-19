@@ -1,9 +1,20 @@
+/* Hallmark · checked: 2026-11-19 · genre: app screen (inferred) · scope: app
+ * floor: 2 FAIL left (30a, *Form.tsx ☑: PDF 서식에 인쇄되는 체크칸, 문서 원본 유지) · fixed: 30a, 63, 19, 34, 26a, 27, 48
+ * built: the project · redesign: polish · v2.0.0 */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+  /* 브랜드 토큰(ATEC 크림슨) — 포커스 링 등 CSS에서 직접 쓰는 색 */
+  --brand: #d60051;
+  --font-body: var(--font-noto), "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+html,
+body {
+  overflow-x: clip;
 }
 
 html {
@@ -11,12 +22,27 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* 키보드 포커스 표시(마우스/터치 탭에는 안 뜸) — 즉시 표시 */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 body {
   @apply bg-canvas text-slate-800 antialiased;
   /* 당겨서 새로고침/바운스 억제, 매끄러운 스크롤 */
   overscroll-behavior-y: none;
   /* 한글 폰트(self-host Noto Sans KR) — PDF 캡처 글자 결정성 확보 */
-  font-family: var(--font-noto), "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-body);
 }
 
 /* 모바일 탭 하이라이트 제거 + 터치 반응성 */

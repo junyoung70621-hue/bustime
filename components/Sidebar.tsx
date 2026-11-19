@@ -11,10 +11,10 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const NAV = [
-  { href: "/", label: "차량도착정보 조회", emoji: "🚌" },
-  { href: "/daepyecha", label: "대폐차(수도권)", emoji: "📄" },
-  { href: "/daepyecha-region", label: "대폐차(지역)", emoji: "📍" },
-  { href: "/daepyecha-express", label: "대폐차(고속/시외)", emoji: "🚍" },
+  { href: "/", label: "차량도착정보 조회" },
+  { href: "/daepyecha", label: "대폐차(수도권)" },
+  { href: "/daepyecha-region", label: "대폐차(지역)" },
+  { href: "/daepyecha-express", label: "대폐차(고속/시외)" },
 ];
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -68,7 +68,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                     : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                <span className="text-lg">{item.emoji}</span>
                 {item.label}
               </Link>
             );

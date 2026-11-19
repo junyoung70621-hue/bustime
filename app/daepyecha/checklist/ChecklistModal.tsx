@@ -27,6 +27,7 @@ import type { Center } from "@/lib/daepyecha/types";
 import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
 
+import Icon from "@/components/Icon";
 // 신규 작성 임시저장 키(브라우저 localStorage). 사진은 파일이라 미포함.
 const DRAFT_KEY = "checklist-draft-v1";
 
@@ -225,7 +226,7 @@ export default function ChecklistModal({
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : "설치 완료 체크리스트"}</h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
@@ -241,7 +242,7 @@ export default function ChecklistModal({
                   onClick={() => setStep("photos")}
                   className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
                 >
-                  ← 사진 촬영
+                  이전: 사진 촬영
                 </button>
               )}
               {!isEdit && draft && !draftHandled && (
@@ -277,10 +278,10 @@ export default function ChecklistModal({
                   </select>
                 </L>
                 {TAGLESS_MODELS.includes(data.model) && (
-                  <label className="col-span-2 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5">
+                  <label className="col-span-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <input type="checkbox" checked={data.tagless} onChange={(e) => patch({ tagless: e.target.checked, checks: {} })} className="h-4 w-4 shrink-0" />
-                    <span className="text-sm font-bold text-indigo-700">태그리스 양식으로 작성</span>
-                    <span className="text-xs text-indigo-500">(비콘/BLE 전용 점검표)</span>
+                    <span className="text-sm font-bold text-slate-700">태그리스 양식으로 작성</span>
+                    <span className="text-xs text-slate-500">(비콘/BLE 전용 점검표)</span>
                   </label>
                 )}
                 <L t="설치일"><input type="date" value={data.installDate} onChange={(e) => patch({ installDate: e.target.value })} className={inp} /></L>
@@ -324,7 +325,7 @@ export default function ChecklistModal({
                   <>
                     <L t="허브 IH"><input value={data.hubIH} onChange={(e) => patch({ hubIH: e.target.value })} className={inp} /></L>
                     <div className="col-span-2">
-                      <L t="타사 장비 설치여부 — 선택"><input value={data.otherEquip} onChange={(e) => patch({ otherEquip: e.target.value })} placeholder="메가박스 TV/대수, 공기청정기 등" className={inp} /></L>
+                      <L t="타사 장비 설치여부 (선택)"><input value={data.otherEquip} onChange={(e) => patch({ otherEquip: e.target.value })} placeholder="메가박스 TV/대수, 공기청정기 등" className={inp} /></L>
                     </div>
                   </>
                 ) : modelFamily(data.model) === "driver" ? (
@@ -332,7 +333,7 @@ export default function ChecklistModal({
                     <L t="운전자단말기 IH"><input value={data.driverIH} onChange={(e) => patch({ driverIH: e.target.value })} className={inp} /></L>
                     {hasSeunghacha(data.model) && (
                       <div className="col-span-2">
-                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">(선택)</span></span>
                         <div className="flex gap-1">
                           <input value={data.seungChaIH} onChange={(e) => patch({ seungChaIH: e.target.value })} placeholder="승차" className={inp} />
                           <input value={data.hacha1IH} onChange={(e) => patch({ hacha1IH: e.target.value })} placeholder="하차1" className={inp} />
@@ -345,7 +346,7 @@ export default function ChecklistModal({
                   <>
                     <L t="LTE모뎀 IH"><input value={data.lteModemIH} onChange={(e) => patch({ lteModemIH: e.target.value })} className={inp} /></L>
                     <div className="col-span-2">
-                      <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
+                      <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차단말기 IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">(선택)</span></span>
                       <div className="flex gap-1">
                         <input value={data.seungChaIH} onChange={(e) => patch({ seungChaIH: e.target.value })} placeholder="승차" className={inp} />
                         <input value={data.hacha1IH} onChange={(e) => patch({ hacha1IH: e.target.value })} placeholder="하차1" className={inp} />
@@ -354,7 +355,7 @@ export default function ChecklistModal({
                     </div>
                     {hasSeunghachaModule(data.model) && (
                       <div className="col-span-2">
-                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">— 선택</span></span>
+                        <span className="mb-1 block text-xs font-semibold text-slate-600">승.하차(모듈) IH (승차 / 하차1 / 하차2) <span className="font-normal text-slate-400">(선택)</span></span>
                         <div className="flex gap-1">
                           <input value={data.seungChaModuleIH} onChange={(e) => patch({ seungChaModuleIH: e.target.value })} placeholder="승차" className={inp} />
                           <input value={data.hacha1ModuleIH} onChange={(e) => patch({ hacha1ModuleIH: e.target.value })} placeholder="하차1" className={inp} />
@@ -485,7 +486,7 @@ export default function ChecklistModal({
 
               {/* 특이사항 */}
               <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-sm font-bold text-slate-600">특이사항 (선택 — 유일하게 선택 입력)</p>
+                <p className="mb-2 text-sm font-bold text-slate-600">특이사항 (유일한 선택 입력 항목)</p>
                 <textarea value={data.etcContent} onChange={(e) => patch({ etcContent: e.target.value })} placeholder="내용 기재" rows={2} className={`${inp} h-auto py-2`} />
                 <div className="mt-2"><L t="수량"><input value={data.etcQty} onChange={(e) => patch({ etcQty: e.target.value })} className={inp} /></L></div>
               </div>
@@ -513,7 +514,7 @@ export default function ChecklistModal({
                   disabled={saving}
                   className="h-11 w-full rounded-xl border border-slate-300 text-sm font-bold text-slate-600 disabled:opacity-50"
                 >
-                  {draftSaved ? "임시저장됨 ✓ (다음에 불러올 수 있어요)" : "임시저장 (작성 내용 보관)"}
+                  {draftSaved ? "임시저장됨 (다음에 불러올 수 있어요)" : "임시저장 (작성 내용 보관)"}
                 </button>
               )}
               <div className="flex gap-2 pb-1">
@@ -608,7 +609,7 @@ function SignBtn({ label, name, done, onClick }: { label: string; name: string; 
   return (
     <button onClick={onClick} className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? `${name} ✓` : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? `${name} (서명완료)` : "사인 입력"}</span>
     </button>
   );
 }

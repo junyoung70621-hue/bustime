@@ -30,7 +30,7 @@ export default function ConfirmationForm({ data, centerSuffix = "센터" }: { da
       ) : null}
 
       {/* 제목 바(원본: 남색 배경 흰 글씨) */}
-      <div className="mb-5 bg-[#22324a] py-3 text-center text-xl font-extrabold tracking-wide text-white">
+      <div className="mb-5 bg-form-head py-3 text-center text-xl font-extrabold tracking-wide text-white">
         {title}
       </div>
 

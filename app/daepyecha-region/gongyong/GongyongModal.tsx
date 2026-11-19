@@ -14,6 +14,7 @@ import type { Region } from "@/lib/checklist-regional/types";
 import SignaturePad from "@/app/daepyecha/SignaturePad";
 import GongyongForm_ from "./GongyongForm";
 
+import Icon from "@/components/Icon";
 function todayStr() {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -142,7 +143,7 @@ export default function GongyongModal({
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-base font-bold text-slate-800">{isEdit ? `${docWord}확인서 수정` : `${docWord} 확인서`}</h2>
-          <button onClick={onClose} aria-label="닫기" className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
@@ -193,7 +194,7 @@ export default function GongyongModal({
                     <div className="col-span-2"><L t="주소"><input value={data.address} onChange={(e) => patch({ address: e.target.value })} className={inp} /></L></div>
                     <label className="col-span-2 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5">
                       <input type="checkbox" checked={data.newTerminal} onChange={(e) => patch({ newTerminal: e.target.checked })} className="h-4 w-4 shrink-0" />
-                      <span className="text-sm font-bold text-slate-700">단말기구분 — 신단말기</span>
+                      <span className="text-sm font-bold text-slate-700">단말기구분: 신단말기</span>
                     </label>
                   </>
                 ) : (
@@ -341,7 +342,7 @@ function SignBtn({ label, name, done, onClick }: { label: string; name: string; 
   return (
     <button onClick={onClick} className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left ${done ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>
       <span className="text-xs font-semibold text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-800">{done ? `${name} ✓` : "✍ 사인 입력"}</span>
+      <span className="text-sm font-bold text-slate-800">{done ? `${name} (서명완료)` : "사인 입력"}</span>
     </button>
   );
 }

@@ -153,7 +153,7 @@ export default function ChecklistList() {
             </button>
           )}
           <button onClick={() => setTrashed((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${trashed ? "bg-slate-800 text-white ring-slate-800" : "bg-white text-slate-500 ring-slate-200"}`}>
-            {trashed ? "← 목록" : "🗑 휴지통"}
+            {trashed ? "목록" : "휴지통"}
           </button>
         </div>
       </div>

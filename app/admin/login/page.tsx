@@ -64,7 +64,7 @@ export default function AdminLogin() {
       </form>
 
       <a href="/" className="text-center text-xs text-slate-400 hover:text-slate-600">
-        ← 검색 화면으로
+        검색 화면으로
       </a>
     </main>
   );
