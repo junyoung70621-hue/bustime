@@ -21,6 +21,7 @@ export default function ChecklistList() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [trashed, setTrashed] = useState(false);
+  const [taglessOnly, setTaglessOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | "new" | string>(null);
@@ -37,6 +38,7 @@ export default function ChecklistList() {
       if (from) p.set("from", from);
       if (to) p.set("to", to);
       if (trashed) p.set("trashed", "1");
+      if (taglessOnly) p.set("tagless", "1");
       const res = await fetch(`/api/checklist?${p.toString()}`);
       const json = await res.json();
       if (seq !== loadSeq.current) return; // 더 최신 요청이 이미 나감
@@ -46,7 +48,7 @@ export default function ChecklistList() {
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
-  }, [filter, q, from, to, trashed]);
+  }, [filter, q, from, to, trashed, taglessOnly]);
 
   useEffect(() => {
     load();
@@ -147,6 +149,9 @@ export default function ChecklistList() {
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setTaglessOnly((t) => !t)} className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 ${taglessOnly ? "bg-violet-600 text-white ring-violet-600" : "bg-white text-slate-500 ring-slate-200"}`}>
+            태그리스만
+          </button>
           {trashed && rows.length > 0 && (
             <button onClick={() => act("/api/checklist/trash?variant=default", "DELETE", "휴지통을 비우면 모두 영구 삭제됩니다. 진행할까요?")} disabled={busy} className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-bold text-red-600">
               비우기

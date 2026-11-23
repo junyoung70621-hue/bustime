@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
 
   query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
   if (center) query = query.eq("center", center);
+  if (sp.get("tagless") === "1") query = query.eq("data->>tagless", "true");
   if (q) query = query.or(`operator.ilike.${orIlike(q)},vehicle_numbers.ilike.${orIlike(q)}`);
   if (from) query = query.gte("install_date", from);
   if (to) query = query.lte("install_date", to);
