@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
 
 const EDITABLE = ["vehicle_id", "route_id", "route_name", "garage_name", "operator"] as const;
 
-function guard() {
-  if (!isAuthed()) return NextResponse.json({ error: "인증 필요" }, { status: 401 });
+async function guard() {
+  if (!(await isAuthed())) return NextResponse.json({ error: "인증 필요" }, { status: 401 });
   return null;
 }
 
@@ -37,7 +37,7 @@ function adminClient() {
 
 // 검색
 export async function GET(req: NextRequest) {
-  const denied = guard();
+  const denied = await guard();
   if (denied) return denied;
 
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
 // 추가
 export async function POST(req: NextRequest) {
-  const denied = guard();
+  const denied = await guard();
   if (denied) return denied;
 
   const body = await req.json().catch(() => ({}));
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
 // 수정
 export async function PATCH(req: NextRequest) {
-  const denied = guard();
+  const denied = await guard();
   if (denied) return denied;
 
   const body = await req.json().catch(() => ({}));
@@ -103,7 +103,7 @@ export async function PATCH(req: NextRequest) {
 
 // 삭제
 export async function DELETE(req: NextRequest) {
-  const denied = guard();
+  const denied = await guard();
   if (denied) return denied;
 
   const plate_no = (req.nextUrl.searchParams.get("plate") ?? "").trim();

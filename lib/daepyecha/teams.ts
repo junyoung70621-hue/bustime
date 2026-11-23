@@ -68,6 +68,7 @@ export async function sendRelayMail(opts: {
       host,
       port: Number(process.env.SMTP_PORT || 587),
       secure: process.env.SMTP_SECURE === "true", // 465=true, 587(STARTTLS)=false
+      requireTLS: process.env.SMTP_SECURE !== "true", // 587에서 STARTTLS 강제(제거 공격 시 평문 AUTH 방지)
       auth:
         process.env.SMTP_USER && process.env.SMTP_PASS
           ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
@@ -120,6 +121,7 @@ export async function sendPhotoRelayMail(opts: {
       host,
       port: Number(process.env.SMTP_PORT || 587),
       secure: process.env.SMTP_SECURE === "true",
+      requireTLS: process.env.SMTP_SECURE !== "true",
       auth:
         process.env.SMTP_USER && process.env.SMTP_PASS
           ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
