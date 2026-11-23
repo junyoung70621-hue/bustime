@@ -9,25 +9,78 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const PROMPTS: Record<string, string> = {
-  // 버전조회 — IH 번호(1): 통합 단말기/AFC/BMS/표출 장치/HMI
-  version:
-    '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 각 항목의 9자리 내외 숫자를 읽어라. ' +
-    '보통 통합 단말기는 1780, AFC는 1782, BMS는 1766, 표출 장치는 1781, HMI는 1784로 시작한다. ' +
-    'JSON만 출력: {"unified":"통합 단말기 숫자","afc":"AFC 숫자","bms":"BMS 숫자","pyochul":"표출 장치 숫자","hmi":"HMI 숫자"} 안 보이는 항목은 빈 문자열.',
-  // 버전조회 — IH 번호(2): 승차/하차1/하차2 단말기
-  door:
-    '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 승차 단말기/하차1 단말기/하차2 단말기의 숫자(보통 1715로 시작)를 읽어라. ' +
-    'JSON만 출력: {"seungcha":"승차 단말기 숫자","hacha1":"하차1 단말기 숫자","hacha2":"하차2 단말기 숫자"} 안 보이는 항목은 빈 문자열.',
-  // 버전조회 — IH 번호(3): 승차/하차1/하차2 CPU(모듈)
-  module:
-    '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 승차 CPU/하차1 CPU/하차2 CPU의 숫자(보통 1786으로 시작)를 읽어라. ' +
-    'JSON만 출력: {"seungcha":"승차 CPU 숫자","hacha1":"하차1 CPU 숫자","hacha2":"하차2 CPU 숫자"} 안 보이는 항목은 빈 문자열.',
-  // 정보조회 — LTE 정보: 시리얼 넘버
-  lte:
-    '버스 단말기 "정보조회(LTE 정보)" 화면 사진이다. "시리얼 넘버" 항목 옆의 숫자를 읽어라. ' +
-    'JSON만 출력: {"serial":"시리얼 넘버 숫자"} 안 보이면 빈 문자열.',
+// 기종별 IH 번호 앞자리 힌트 (model 미지정 = 인천). B700/B710 은 화면 사진 받은 뒤 추가.
+const HINTS: Record<string, { version: string; door: string; module: string }> = {
+  incheon: {
+    version: "보통 통합 단말기는 1780, AFC는 1782, BMS는 1766, 표출 장치는 1781, HMI는 1784로 시작한다. ",
+    door: "보통 1715로 시작",
+    module: "보통 1786으로 시작",
+  },
+  B800: {
+    version: "보통 통합 단말기는 5500, AFC는 5700, BMS는 5700, 표출 장치는 5600, HMI는 5800으로 시작한다. ",
+    door: "보통 1560으로 시작",
+    module: "보통 5900으로 시작",
+  },
+  B700: {
+    version: "보통 통합 단말기는 4400, AFC는 4600, BMS는 4600, 표출 장치는 4500, HMI는 4700으로 시작한다. ",
+    door: "보통 1560으로 시작",
+    module: "보통 5900으로 시작",
+  },
 };
+
+function promptFor(kind: string, model: string): string | undefined {
+  const h = HINTS[model] ?? HINTS.incheon;
+  switch (kind) {
+    // 버전조회 — IH 번호(1): 통합 단말기/AFC/BMS/표출 장치/HMI
+    case "version":
+      return (
+        '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 각 항목의 9자리 내외 숫자를 읽어라. ' + h.version +
+        'JSON만 출력: {"unified":"통합 단말기 숫자","afc":"AFC 숫자","bms":"BMS 숫자","pyochul":"표출 장치 숫자","hmi":"HMI 숫자"} 안 보이는 항목은 빈 문자열.'
+      );
+    // 버전조회 — IH 번호(2): 승차/하차1/하차2 단말기
+    case "door":
+      return (
+        `버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 승차 단말기/하차1 단말기/하차2 단말기의 숫자(${h.door})를 읽어라. ` +
+        'JSON만 출력: {"seungcha":"승차 단말기 숫자","hacha1":"하차1 단말기 숫자","hacha2":"하차2 단말기 숫자"} 안 보이는 항목은 빈 문자열.'
+      );
+    // 버전조회 — IH 번호(3): 승차/하차1/하차2 CPU(모듈)
+    case "module":
+      return (
+        `버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 승차 CPU/하차1 CPU/하차2 CPU의 숫자(${h.module})를 읽어라. ` +
+        'JSON만 출력: {"seungcha":"승차 CPU 숫자","hacha1":"하차1 CPU 숫자","hacha2":"하차2 CPU 숫자"} 안 보이는 항목은 빈 문자열.'
+      );
+    // 승하차 단말기 + CPU(모듈)가 한 화면 (B700)
+    case "doormodule":
+      return (
+        `버스 단말기 "단말기 버전" 화면 사진이다. 승차/하차1/하차2 단말기 숫자(${h.door})와 승차/하차1/하차2 CPU 숫자(${h.module})를 읽어라. ` +
+        'JSON만 출력: {"seungcha":"승차 단말기","hacha1":"하차1 단말기","hacha2":"하차2 단말기","seungchaCpu":"승차 CPU","hacha1Cpu":"하차1 CPU","hacha2Cpu":"하차2 CPU"} 안 보이는 항목은 빈 문자열.'
+      );
+    // management 화면 상단 "(OS BuildDate: ..../VerCode 22)" (B700 확인 OS버전)
+    case "os":
+      return (
+        '버스 단말기 "management" 화면 사진이다. 상단의 "(OS BuildDate: 날짜/VerCode 숫자)" 에서 VerCode 뒤의 숫자만 읽어라. 날짜는 무시. ' +
+        'JSON만 출력(값은 문자열): {"os":"VerCode 숫자"} 안 보이면 빈 문자열.'
+      );
+    // 확인 FW버전 — B700: "통합 단말기 커널 버전"의 AFC / B800: 표출 장치 버전의 AFC·OS
+    case "fw":
+      if (model === "B700") {
+        return (
+          '버스 단말기 "단말기 버전" 화면 사진이다. "통합 단말기 커널 버전" 아래 "AFC" 항목 옆의 숫자를 읽어라. BMS·승하차 단말기는 무시. ' +
+          'JSON만 출력(값은 문자열): {"afc":"AFC 숫자"} 안 보이면 빈 문자열.'
+        );
+      }
+      return (
+        '버스 단말기 "버전조회" 화면의 "표출 장치" 버전 목록 사진이다. "AFC" 항목과 "OS" 항목 옆의 숫자를 화면에 보이는 그대로(앞자리 0 포함) 읽어라. ' +
+        'TMGR/Management/Diagnostic/ApkInstall 은 무시. JSON만 출력(값은 문자열): {"afc":"AFC 숫자","os":"OS 숫자"} 안 보이는 항목은 빈 문자열.'
+      );
+    // 정보조회 — LTE 정보: 시리얼 넘버
+    case "lte":
+      return (
+        '버스 단말기 "정보조회(LTE 정보)" 화면 사진이다. "시리얼 넘버" 항목 옆의 숫자를 읽어라. ' +
+        'JSON만 출력: {"serial":"시리얼 넘버 숫자"} 안 보이면 빈 문자열.'
+      );
+  }
+}
 
 // 429 응답의 RetryInfo(retryDelay "24s")에서 대기 초 추출. 없으면 30초 안내.
 function retrySeconds(json: unknown): number {
@@ -46,7 +99,7 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const kind = String(form.get("kind") ?? "");
   const image = form.get("image");
-  const prompt = PROMPTS[kind];
+  const prompt = promptFor(kind, String(form.get("model") ?? ""));
   if (!prompt || !(image instanceof File)) {
     return NextResponse.json({ error: "잘못된 요청(kind/image)" }, { status: 400 });
   }
@@ -80,6 +133,12 @@ export async function POST(req: NextRequest) {
         res = await call();
         json = await res.json();
       }
+    }
+    // Gemini 일시 과부하(503 high demand): 2초 뒤 1회 자동 재시도.
+    if (res.status === 503) {
+      await new Promise((r) => setTimeout(r, 2000));
+      res = await call();
+      json = await res.json();
     }
     if (res.status === 429) {
       return NextResponse.json({ error: `요청이 몰렸어요 — ${retrySeconds(json)}초 뒤에 재시도해주세요.` }, { status: 429 });

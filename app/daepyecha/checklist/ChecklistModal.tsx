@@ -11,6 +11,7 @@ import { generatePdfAndJpg } from "@/lib/daepyecha/pdf";
 import { emptyPhotoSlots, uploadPhotosDirect, type PhotoSlot } from "@/lib/daepyecha/photo";
 import type { PhotoRef } from "@/lib/daepyecha/photo-upload";
 import PhotoStep from "./PhotoStep";
+import AutoStep from "./AutoStep";
 import { CK_MODELS, CK_MODELS_DATA, CK_TAGLESS_DATA, TAGLESS_MODELS, TAGLESS_CHECK_KEY, emptyCkForm, rowCheckKey, rowCheckActive, modelFamily, hasSeunghacha, hasSeunghachaModule, presetFor, operatorFullName } from "@/lib/checklist/templates";
 import type { CkFormState, CkModel, CkRow, CkRowDef, VehicleType, OX } from "@/lib/checklist/types";
 
@@ -74,7 +75,7 @@ export default function ChecklistModal({
   const [draftSaved, setDraftSaved] = useState(false); // 임시저장 버튼 피드백
   // 신규 작성은 사진 촬영 단계부터. 단, 임시저장본이 있으면 폼으로 바로 진입(복원 편의).
   // 수정은 폼으로 바로 진입(사진 재업로드 안 함).
-  const [step, setStep] = useState<"photos" | "form">(isEdit || draft ? "form" : "photos");
+  const [step, setStep] = useState<"photos" | "auto" | "form">(isEdit || draft ? "form" : "photos");
   const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
   // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
   const photosRef = useRef(photos);
@@ -225,7 +226,7 @@ export default function ChecklistModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
       <div className="safe-bottom flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-2xl bg-white sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-          <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : "설치 완료 체크리스트"}</h2>
+          <h2 className="text-base font-bold text-slate-800">{isEdit ? "체크리스트 수정" : step === "photos" ? "증빙사진 촬영" : step === "auto" ? "IH 자동입력" : "설치 완료 체크리스트"}</h2>
           <button onClick={onClose} aria-label="닫기" className="-mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-600"><Icon name="close" /></button>
         </div>
 
@@ -233,16 +234,18 @@ export default function ChecklistModal({
           {loading ? (
             <p className="py-10 text-center text-sm text-slate-400">불러오는 중…</p>
           ) : step === "photos" ? (
-            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("form")} />
+            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("auto")} />
+          ) : step === "auto" ? (
+            <AutoStep data={data} patch={patch} onNext={() => setStep("form")} onBack={() => setStep("photos")} />
           ) : (
             <div className="flex flex-col gap-3">
               {!isEdit && (
                 <button
                   type="button"
-                  onClick={() => setStep("photos")}
+                  onClick={() => setStep("auto")}
                   className="self-start text-sm font-semibold text-slate-500 hover:text-slate-700"
                 >
-                  이전: 사진 촬영
+                  이전: IH 자동입력
                 </button>
               )}
               {!isEdit && draft && !draftHandled && (
