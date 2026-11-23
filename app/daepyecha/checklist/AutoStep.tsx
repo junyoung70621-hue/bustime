@@ -5,7 +5,7 @@
 //   기종 선택 → 기종별 관리자 화면 촬영 → 인식값을 폼 필드에 반영.
 //   기종을 여기서 먼저 정해야 함: 폼의 모델 선택은 presetFor()로 IH칸을 비우므로
 //   인식 후 모델을 고르면 인식값이 지워진다.
-//   현재 B800·B700 지원 (B710은 화면 사진 받은 뒤 AUTO 에 추가). LTE는 제외.
+//   B800·B700·B710 지원. LTE는 제외.
 // ─────────────────────────────────────────────────────────────
 import IhAutoInputStep, { type AutoSlot } from "../IhAutoInputStep";
 import { presetFor } from "@/lib/checklist/templates";
@@ -78,6 +78,29 @@ AUTO.B700 = {
       if (v.os) p.osVer = noLeadZero(v.os);
     } else if (kind === "fw") {
       if (v.afc) p.fwVer = noLeadZero(v.afc);
+    }
+    return p;
+  },
+};
+// B710: FW·OS는 B800과 같은 표출 장치 화면. 1페이지는 HMI(=표출 IH)·CPU(=표출 모듈 IH). 승하차 모듈 칸 없음.
+AUTO.B710 = {
+  slots: [
+    { kind: "fw", label: "1. FW·OS 버전", hint: "관리자메뉴 - 버전조회 - 9페이지 (표출 장치: AFC / OS)" },
+    { kind: "version", label: "2. 메인·표출 IH", hint: "관리자메뉴 - 버전조회 - 1페이지" },
+    { kind: "door", label: "3. 승하차 단말기 IH", hint: "관리자메뉴 - 버전조회 - 2페이지" },
+  ],
+  toPatch(kind, v) {
+    const p: Partial<CkFormState> = {};
+    if (kind === "fw") {
+      if (v.afc) p.fwVer = noLeadZero(v.afc);
+      if (v.os) p.osVer = noLeadZero(v.os).padStart(2, "0"); // 기존 B710 기록 표기 "03"
+    } else if (kind === "version") {
+      const main = [v.unified, v.afc, v.bms].filter(Boolean).join(" / "); // 통합 / AFC / BMS
+      if (main) p.mainIH = main;
+      if (v.hmi) p.pyochulIH = v.hmi;
+      if (v.cpu) p.pyochulModuleIH = v.cpu;
+    } else {
+      Object.assign(p, doorPatch(kind, v));
     }
     return p;
   },

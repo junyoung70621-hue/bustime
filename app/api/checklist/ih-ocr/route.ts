@@ -26,6 +26,11 @@ const HINTS: Record<string, { version: string; door: string; module: string }> =
     door: "보통 1560으로 시작",
     module: "보통 5900으로 시작",
   },
+  B710: {
+    version: "보통 통합단말기는 4450, AFC는 4650, BMS는 4650, HMI는 4550, CPU는 4750으로 시작한다. ",
+    door: "보통 1553으로 시작",
+    module: "",
+  },
 };
 
 function promptFor(kind: string, model: string): string | undefined {
@@ -33,6 +38,13 @@ function promptFor(kind: string, model: string): string | undefined {
   switch (kind) {
     // 버전조회 — IH 번호(1): 통합 단말기/AFC/BMS/표출 장치/HMI
     case "version":
+      // B710: 1페이지에 "표출 장치" 대신 HMI·CPU 가 있음
+      if (model === "B710") {
+        return (
+          '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 각 항목의 9자리 숫자를 읽어라. ' + h.version +
+          'JSON만 출력: {"unified":"통합단말기 숫자","afc":"AFC 숫자","bms":"BMS 숫자","hmi":"HMI 숫자","cpu":"CPU 숫자"} 안 보이는 항목은 빈 문자열.'
+        );
+      }
       return (
         '버스 단말기 "버전조회" 화면 사진이다. IH 번호 목록에서 각 항목의 9자리 내외 숫자를 읽어라. ' + h.version +
         'JSON만 출력: {"unified":"통합 단말기 숫자","afc":"AFC 숫자","bms":"BMS 숫자","pyochul":"표출 장치 숫자","hmi":"HMI 숫자"} 안 보이는 항목은 빈 문자열.'

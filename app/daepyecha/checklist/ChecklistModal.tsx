@@ -75,7 +75,8 @@ export default function ChecklistModal({
   const [draftSaved, setDraftSaved] = useState(false); // 임시저장 버튼 피드백
   // 신규 작성은 사진 촬영 단계부터. 단, 임시저장본이 있으면 폼으로 바로 진입(복원 편의).
   // 수정은 폼으로 바로 진입(사진 재업로드 안 함).
-  const [step, setStep] = useState<"photos" | "auto" | "form">(isEdit || draft ? "form" : "photos");
+  // 신규 작성은 항상 사진 촬영부터(임시저장본엔 사진이 없으므로 건너뛰면 안 됨). 수정은 폼으로 바로.
+  const [step, setStep] = useState<"photos" | "auto" | "form">(isEdit ? "form" : "photos");
   const [photos, setPhotos] = useState<PhotoSlot[]>(() => emptyPhotoSlots());
   // 모달이 완전히 닫힐 때만 미리보기 URL 일괄 해제(폼 단계 전환 시에는 유지)
   const photosRef = useRef(photos);
@@ -234,7 +235,20 @@ export default function ChecklistModal({
           {loading ? (
             <p className="py-10 text-center text-sm text-slate-400">불러오는 중…</p>
           ) : step === "photos" ? (
-            <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("auto")} />
+            <div className="flex flex-col gap-3">
+              {/* 임시저장 복원은 첫 화면에서: 자동입력·폼 단계에서 복원하면 방금 입력한 값을 덮어씀 */}
+              {!isEdit && draft && !draftHandled && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-sm font-bold text-emerald-800">임시저장된 작성 내용이 있어요</p>
+                  <p className="mt-0.5 text-xs text-emerald-700">불러오면 사진을 제외한 입력값·체크·서명이 복원됩니다. 사진은 아래에서 다시 촬영하세요.</p>
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={restoreDraft} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">불러오기</button>
+                    <button type="button" onClick={() => setDraftHandled(true)} className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700">새로 작성</button>
+                  </div>
+                </div>
+              )}
+              <PhotoStep photos={photos} setPhotos={setPhotos} onNext={() => setStep("auto")} />
+            </div>
           ) : step === "auto" ? (
             <AutoStep data={data} patch={patch} onNext={() => setStep("form")} onBack={() => setStep("photos")} />
           ) : (
@@ -247,16 +261,6 @@ export default function ChecklistModal({
                 >
                   이전: IH 자동입력
                 </button>
-              )}
-              {!isEdit && draft && !draftHandled && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-sm font-bold text-emerald-800">임시저장된 작성 내용이 있어요</p>
-                  <p className="mt-0.5 text-xs text-emerald-700">불러오면 사진을 제외한 입력값·체크·서명이 복원됩니다.</p>
-                  <div className="mt-2 flex gap-2">
-                    <button type="button" onClick={restoreDraft} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">불러오기</button>
-                    <button type="button" onClick={() => setDraftHandled(true)} className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-bold text-emerald-700">새로 작성</button>
-                  </div>
-                </div>
               )}
               {isEdit && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
