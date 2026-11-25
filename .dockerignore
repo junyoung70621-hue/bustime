@@ -18,3 +18,7 @@ CLAUDE-SECURITY-*
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# 전환 때 만드는 Supabase 전체 덤프(서명 포함) — 이미지에 넣지 않음
+*.sql
+!db/init.sql

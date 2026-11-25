@@ -19,6 +19,9 @@ function pool(): pg.Pool {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL 환경변수가 없습니다.");
   _pool = new pg.Pool({ connectionString: url, max: 10 });
+  // DB 재시작 등으로 유휴 연결이 끊기면 풀이 'error' 이벤트를 낸다. 리스너가 없으면
+  // Node 프로세스 전체가 죽으므로 로그만 남긴다(다음 쿼리는 새 연결로 자동 진행).
+  _pool.on("error", (e) => console.error("DB 유휴 연결 오류(무시):", e.message));
   return _pool;
 }
 

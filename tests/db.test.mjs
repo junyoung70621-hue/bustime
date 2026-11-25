@@ -45,6 +45,28 @@ test("통합: 검색어 특수문자도 오류 없이 ILIKE", db, async () => {
   assert.ok(Array.isArray(rows));
 });
 
+test("통합: DB가 유휴 연결을 끊어도(재시작 등) 프로세스가 죽지 않고 다음 쿼리가 성공", db, async () => {
+  await q("select 1"); // 풀에 유휴 연결 1개 생성
+  const errors = [];
+  const onErr = (e) => errors.push(e);
+  process.on("uncaughtException", onErr);
+  try {
+    // 별도 연결로 풀의 유휴 연결을 강제 종료(= DB 재시작 상황)
+    const pg = (await import("pg")).default;
+    const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await admin.connect();
+    await admin.query(
+      "select pg_terminate_backend(pid) from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()",
+    );
+    await admin.end();
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(errors.length, 0, `처리 안 된 오류: ${errors[0]}`);
+    assert.deepEqual(await q("select 1 as ok"), [{ ok: 1 }]);
+  } finally {
+    process.off("uncaughtException", onErr);
+  }
+});
+
 test("통합: 결과 없으면 q1 은 null", db, async () => {
   assert.equal(await q1("select 1 from vehicles where plate_no = $1", ["없는차"]), null);
 });

@@ -35,3 +35,7 @@ supabase/.branches/
 *.db
 *.sqlite
 /data-portal-application/
+
+# 전환 때 만드는 Supabase 전체 덤프(서명 포함)
+/supa.sql
+/.tmp-files/
