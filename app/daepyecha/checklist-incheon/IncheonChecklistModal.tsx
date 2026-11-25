@@ -18,6 +18,7 @@ import SignaturePad from "../SignaturePad";
 import IncheonChecklistForm from "./IncheonChecklistForm";
 
 import Icon from "@/components/Icon";
+import { uuid } from "@/lib/uuid";
 const DRAFT_KEY = "checklist-incheon-draft-v1";
 
 function todayStr() {
@@ -159,7 +160,7 @@ export default function IncheonChecklistModal({
       // 증빙사진은 Storage에 직접 업로드(수도권과 동일) → 본문에는 참조(path)만 실어 413 차단.
       const slots = photos.filter((s) => !s.na && s.file).map((s) => ({ label: s.label, file: s.file! }));
       let photoRefs: PhotoRef[] = [];
-      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, crypto.randomUUID());
+      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, uuid());
 
       const meta = {
         center: "인천",

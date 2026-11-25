@@ -1,10 +1,9 @@
 // ─────────────────────────────────────────────────────────────
 // 증빙사진(수도권 설치완료) — 슬롯 정의 + 클라이언트 압축 (브라우저 전용)
 //   설치 현장에서 촬영한 8종 사진을 Teams 업로드용으로 줄여 메일 첨부 한도(25MB) 내로.
-//   보관본은 Teams 전용 → Supabase/DB 저장 없음.
+//   보관본은 Teams 전용 → DB 저장 없음(서버 임시본은 릴레이 후 삭제).
 // ─────────────────────────────────────────────────────────────
-import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
-import { PHOTO_BUCKET, type PhotoRef } from "./photo-upload";
+import type { PhotoRef } from "./photo-upload";
 
 /** 증빙사진 슬롯(촬영 순서 = 표시 순서). 라벨이 곧 Teams 저장 파일명이 된다. */
 export const PHOTO_SLOTS = [
@@ -64,44 +63,32 @@ export async function compressImage(file: File, maxDim = 1600, quality = 0.7): P
   }
 }
 
-/** 증빙사진을 Storage에 직접 업로드하고 meta용 참조 목록을 반환.
- *  함수 본문(~4.5MB) 한계를 우회한다(사진 자체는 본문에 싣지 않음).
- *  ① 서버에서 서명 업로드 URL 발급 → ② 압축 후 서명 URL로 직접 PUT.
+/** 증빙사진을 서버(/api/checklist/photos)에 한 장씩 병렬 업로드하고 meta용 참조 목록을 반환.
+ *  사진 자체는 저장 요청 본문에 싣지 않는다(참조만). 압축은 촬영 시점(PhotoStep)에 이미 끝남.
  *  업로드 실패 시 throw(명확히 안내). */
 export async function uploadPhotosDirect(
   slots: { label: PhotoLabel; file: File }[],
   batchId: string,
 ): Promise<PhotoRef[]> {
-  if (slots.length === 0) return [];
-
-  // ① 서명 업로드 URL 발급
-  const res = await fetch("/api/checklist/photo-upload-urls", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ batchId, items: slots.map((s, idx) => ({ idx, label: s.label })) }),
-  });
-  const text = await res.text();
-  let json: { urls?: { idx: number; path: string; token: string; filename: string }[]; error?: string };
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    throw new Error(`서명 URL 응답 파싱 실패: ${text.slice(0, 80) || "(빈 응답)"}`);
-  }
-  if (!res.ok || !json.urls) throw new Error(json.error ?? "서명 URL 발급 실패");
-
-  // ② 서명 URL로 직접 업로드(병렬). 압축은 촬영 시점(PhotoStep)에 이미 끝남.
-  const sb = getSupabaseBrowser();
-  const byIdx = new Map(json.urls.map((u) => [u.idx, u]));
   return Promise.all(
     slots.map(async (s, idx) => {
-      const u = byIdx.get(idx);
-      if (!u) throw new Error(`서명 URL 누락(${s.label})`);
-      const up = await sb.storage.from(PHOTO_BUCKET).uploadToSignedUrl(u.path, u.token, s.file, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
-      if (up.error) throw new Error(`사진 업로드 실패(${s.label}): ${up.error.message}`);
-      return { path: u.path, filename: u.filename } satisfies PhotoRef;
+      const fd = new FormData();
+      fd.append("batchId", batchId);
+      fd.append("idx", String(idx));
+      fd.append("label", s.label);
+      fd.append("file", s.file, `${idx}.jpg`);
+      const res = await fetch("/api/checklist/photos", { method: "POST", body: fd });
+      const text = await res.text();
+      let json: { path?: string; filename?: string; error?: string } = {};
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        /* 비JSON 응답(프록시 오류 등)은 아래에서 상태코드로 안내 */
+      }
+      if (!res.ok || !json.path || !json.filename) {
+        throw new Error(`사진 업로드 실패(${s.label}): ${json.error ?? `HTTP ${res.status}`}`);
+      }
+      return { path: json.path, filename: json.filename } satisfies PhotoRef;
     }),
   );
 }

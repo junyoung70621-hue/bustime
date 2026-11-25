@@ -29,6 +29,7 @@ import SignaturePad from "../SignaturePad";
 import ChecklistForm from "./ChecklistForm";
 
 import Icon from "@/components/Icon";
+import { uuid } from "@/lib/uuid";
 // 신규 작성 임시저장 키(브라우저 localStorage). 사진은 파일이라 미포함.
 const DRAFT_KEY = "checklist-draft-v1";
 
@@ -158,7 +159,7 @@ export default function ChecklistModal({
       //   본문에는 사진 참조(path)만 실어 413을 원천 차단한다. 서버가 릴레이 후 임시본 삭제.
       const slots = photos.filter((s) => !s.na && s.file).map((s) => ({ label: s.label, file: s.file! }));
       let photoRefs: PhotoRef[] = [];
-      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, crypto.randomUUID());
+      if (slots.length > 0) photoRefs = await uploadPhotosDirect(slots, uuid());
 
       const meta = {
         center: data.center,
