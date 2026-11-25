@@ -5,22 +5,14 @@
 //   GPS/LTE 신호가 끊긴 차량도 아침에 잡아둔 앞차로 위치를 가늠할 수 있게 하는 용도.
 //   ※ 마을버스(2)는 제외(요청). 낮 동안은 검색 API가 같은 테이블을 덮어쓰며 최신 유지.
 //
+// 실행(서버): docker compose exec -T web node scripts/seed-front-car.mjs
 // 실행(로컬): node scripts/seed-front-car.mjs   (.env.local 사용)
 // 실행(CI):  GitHub Actions 매일 07:00 KST. secrets 에서 키를 읽음.
 // ─────────────────────────────────────────────────────────────
 import pg from "pg";
-import { readFileSync } from "fs";
+import { loadEnv, targetPg } from "./pg-config.mjs";
 
-const root = new URL("..", import.meta.url);
-const env = { ...process.env };
-try {
-  for (const line of readFileSync(new URL(".env.local", root), "utf8").split(/\r?\n/)) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) env[m[1]] = m[2];
-  }
-} catch {
-  console.log(".env.local 없음 → process.env(secrets) 사용");
-}
+const env = loadEnv();
 
 const KEY = env.PUBLIC_DATA_API_KEY;
 if (!KEY) {
@@ -41,13 +33,7 @@ const SERVICE_DATE = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(
 
 // Pool 사용: 워커가 동시에 upsert 하므로 단일 Client(동시 쿼리 불가) 대신 연결 풀로.
 const pool = new pg.Pool({
-  host: env.SUPABASE_DB_HOST,
-  port: Number(env.SUPABASE_DB_PORT || 5432),
-  user: env.SUPABASE_DB_USER,
-  password: env.SUPABASE_DB_PASSWORD,
-  database: "postgres",
-  ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 15000,
+  ...targetPg(env),
   max: 8,
 });
 
