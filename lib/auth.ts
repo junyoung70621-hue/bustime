@@ -52,7 +52,8 @@ export async function passwordLogin(req: NextRequest, kind: SessionKind): Promis
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSIONS[kind].cookie, await sessionToken(kind), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // 사내 서버를 http(비 HTTPS)로 접속하면 Secure 쿠키가 버려져 로그인이 안 됨 → COOKIE_SECURE=false 로 끔
+    secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     sameSite: "lax",
     path: "/",
     maxAge: SESSIONS[kind].maxAge,

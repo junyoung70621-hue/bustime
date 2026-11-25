@@ -24,3 +24,14 @@ supabase/fill-last-seq.sql
 # Supabase CLI 로컬 캐시(내부 식별자/풀러 URL 포함)
 supabase/.temp/
 supabase/.branches/
+
+# 인수인계 문서(관리자 비번·DB 사용자 등 비밀값 포함 → 공개 레포에 올리지 않음, 사내 직접 공유)
+인수인계.md
+
+.vercel
+
+# 도커 데이터(볼륨/로컬 바인드)·DB 파일
+/data/
+*.db
+*.sqlite
+/data-portal-application/
