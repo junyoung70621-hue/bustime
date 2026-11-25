@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 // 비밀번호 1개짜리 로그인 폼 (관리자 / 대폐차 현장 공용)
 export default function PasswordLogin({ title, endpoint, next, placeholder }: { title: string; endpoint: string; next: string; placeholder: string }) {
-  const router = useRouter();
   const [pw, setPw] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,10 +21,12 @@ export default function PasswordLogin({ title, endpoint, next, placeholder }: { 
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "로그인 실패");
-      router.replace(next);
+      // 화면 내부 이동(router)은 로그인 전 받아둔 "로그인으로 보내기" 결과를 재사용하거나
+      // 다음 화면을 받는 동안 로그인 화면에 멈춘 것처럼 보임 → 새 쿠키로 페이지를 새로 연다.
+      // 이동하는 동안 버튼은 "확인중…" 유지(loading 을 풀지 않음).
+      window.location.replace(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류");
-    } finally {
       setLoading(false);
     }
   }
