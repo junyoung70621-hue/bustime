@@ -10,6 +10,8 @@ node_modules
 !.env.example
 data
 docs
+tests
+.superpowers
 CLAUDE-SECURITY-*
 인수인계.md
 *.tsbuildinfo
