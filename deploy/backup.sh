@@ -20,7 +20,7 @@ docker compose exec -T db pg_dump -U app app | gzip > "$dest/db.sql.gz.tmp"
 mv "$dest/db.sql.gz.tmp" "$dest/db.sql.gz"
 
 # 파일 볼륨(PDF 등) 통째로. 읽기 전용으로 붙여서 묶는다.
-docker run --rm -v myapp_data:/d:ro alpine tar czf - -C /d . > "$dest/files.tar.gz.tmp"
+docker run --rm -v myapp_data:/d:ro postgres:17 tar czf - -C /d . > "$dest/files.tar.gz.tmp"
 mv "$dest/files.tar.gz.tmp" "$dest/files.tar.gz"
 
 find "$DEST_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +

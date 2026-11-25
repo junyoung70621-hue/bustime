@@ -19,7 +19,8 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:17-alpine
+    # alpine 판은 CentOS 7(커널 3.10)에서 initdb 파일 쓰기가 막힘(Operation not permitted) → 데비안 판 사용
+    image: postgres:17
     container_name: myapp-db
     restart: unless-stopped
     environment:
