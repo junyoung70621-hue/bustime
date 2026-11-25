@@ -2,11 +2,11 @@
 // 1. API 라우트 (백엔드 로직)
 // GET /api/bus/search?q=1234
 //   - q: 차량번호 끝 4자리(1~4자리 숫자)
-// 흐름: Supabase에서 후보 차량 조회 → 노선별 실시간 위치 조회 → ETA 계산
+// 흐름: DB에서 후보 차량 조회 → 노선별 실시간 위치 조회 → ETA 계산
 // 공공 API 키는 서버에서만 사용하므로 클라이언트에 노출되지 않음.
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase, type VehicleRow, type RouteRow, type Station } from "@/lib/supabase";
+import { q as sql, jsonb, type VehicleRow, type RouteRow, type Station } from "@/lib/db";
 import {
   fetchBusPositions,
   fetchArrivalInfo,
@@ -109,19 +109,18 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 1) Supabase에서 끝자리가 일치하는 차량 후보 조회
-  const supabase = getSupabase();
-  const { data: vehicles, error } = await supabase
-    .from("vehicles")
-    .select("plate_no, vehicle_id, route_id, route_name, garage_name, operator")
-    .ilike("plate_no", `%${q}`)
-    .limit(50)
-    .returns<VehicleRow[]>();
-
-  if (error) {
-    return NextResponse.json({ error: `DB 조회 실패: ${error.message}` }, { status: 500 });
+  // 1) DB에서 끝자리가 일치하는 차량 후보 조회 (q 는 위에서 숫자 1~4자리로 검증됨)
+  let vehicles: VehicleRow[];
+  try {
+    vehicles = await sql<VehicleRow>(
+      `select plate_no, vehicle_id, route_id, route_name, garage_name, operator
+         from vehicles where plate_no ilike $1 limit 50`,
+      [`%${q}`],
+    );
+  } catch (e) {
+    return NextResponse.json({ error: `DB 조회 실패: ${e instanceof Error ? e.message : e}` }, { status: 500 });
   }
-  if (!vehicles || vehicles.length === 0) {
+  if (vehicles.length === 0) {
     return NextResponse.json({ results: [] as SearchResult[] });
   }
 
@@ -134,12 +133,14 @@ export async function GET(req: NextRequest) {
   const routeTypeByRoute = new Map<string, string | null>();
   const stationsByRoute = new Map<string, Station[] | null>();
   if (routeIds.length > 0) {
-    const { data: routeRows } = await supabase
-      .from("routes")
-      .select("route_id, last_seq, last_st_id, route_type, stations")
-      .in("route_id", routeIds)
-      .returns<RouteRow[]>();
-    for (const r of routeRows ?? []) {
+    const routeRows = await sql<RouteRow>(
+      "select route_id, last_seq, last_st_id, route_type, stations from routes where route_id = any($1::text[])",
+      [routeIds],
+    ).catch((e) => {
+      console.error("routes 조회 실패:", e);
+      return [] as RouteRow[];
+    });
+    for (const r of routeRows) {
       lastSeqByRoute.set(r.route_id, r.last_seq);
       lastStIdByRoute.set(r.route_id, r.last_st_id);
       routeTypeByRoute.set(r.route_id, r.route_type);
@@ -211,10 +212,15 @@ export async function GET(req: NextRequest) {
     }
   }
   if (frontRecords.length > 0) {
-    const { error: upErr } = await supabase
-      .from("front_car_log")
-      .upsert(frontRecords, { onConflict: "service_date,vehicle_id" });
-    if (upErr) console.error("front_car_log upsert 실패:", upErr.message);
+    await sql(
+      `insert into front_car_log (service_date, vehicle_id, front_tail, front_gap, sect_ord, recorded_at)
+       select * from jsonb_to_recordset($1::jsonb)
+         as x(service_date date, vehicle_id text, front_tail text, front_gap int, sect_ord int, recorded_at timestamptz)
+       on conflict (service_date, vehicle_id) do update set
+         front_tail = excluded.front_tail, front_gap = excluded.front_gap,
+         sect_ord = excluded.sect_ord, recorded_at = excluded.recorded_at`,
+      [jsonb(frontRecords)],
+    ).catch((e) => console.error("front_car_log upsert 실패:", e instanceof Error ? e.message : e));
   }
 
   // 2-3) 실시간 신호가 없는 후보 차량은 오늘 기록된 마지막 앞차를 조회(있으면 그걸로 표시).
@@ -229,12 +235,12 @@ export async function GET(req: NextRequest) {
     { front_tail: string; front_gap: number; recorded_at: string }
   >();
   if (offlineIds.length > 0) {
-    const { data: hist } = await supabase
-      .from("front_car_log")
-      .select("vehicle_id, front_tail, front_gap, recorded_at")
-      .eq("service_date", serviceDate)
-      .in("vehicle_id", offlineIds);
-    for (const h of hist ?? []) histByVehicle.set(h.vehicle_id, h);
+    const hist = await sql<{ vehicle_id: string; front_tail: string; front_gap: number; recorded_at: string }>(
+      `select vehicle_id, front_tail, front_gap, recorded_at
+         from front_car_log where service_date = $1 and vehicle_id = any($2::text[])`,
+      [serviceDate, offlineIds],
+    ).catch(() => []);
+    for (const h of hist) histByVehicle.set(h.vehicle_id, h);
   }
 
   // 3) 각 후보 차량을 실시간 위치와 매칭 → ETA 계산

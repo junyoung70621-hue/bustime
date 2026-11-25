@@ -4,15 +4,15 @@
 //   POST           : 차량 추가
 //   PATCH          : 차량 수정 (plate_no 기준)
 //   DELETE ?plate= : 차량 삭제
-// 쓰기는 service_role 로 처리(서버 전용). 읽기 포함 모든 작업 인증 확인.
+// 읽기 포함 모든 작업 인증 확인.
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthed } from "@/lib/auth";
-import { getSupabase, orIlike } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, likeContains } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// 컬럼명은 이 고정 목록에서만 SQL 에 들어간다(사용자 입력 키는 화이트리스트 통과분만).
 const EDITABLE = ["vehicle_id", "route_id", "route_name", "garage_name", "operator"] as const;
 
 async function guard() {
@@ -20,43 +20,28 @@ async function guard() {
   return null;
 }
 
-// service_role 클라이언트 안전 획득 (미설정 시 명확한 503)
-function adminClient() {
-  try {
-    return { sb: getSupabaseAdmin(), err: null as NextResponse | null };
-  } catch (e) {
-    return {
-      sb: null,
-      err: NextResponse.json(
-        { error: "수정 기능 비활성: 서버에 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다." },
-        { status: 503 },
-      ),
-    };
-  }
-}
+const fail = (e: unknown) =>
+  NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
 
 // 검색
 export async function GET(req: NextRequest) {
   const denied = await guard();
   if (denied) return denied;
 
-  const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
-  const sb = getSupabase(); // 읽기는 anon(RLS)로 충분
-  let query = sb
-    .from("vehicles")
-    .select("plate_no, vehicle_id, route_id, route_name, garage_name, operator")
-    .order("plate_no")
-    .limit(200);
-
-  if (q) {
-    const p = orIlike(q);
-    query = query.or(
-      `plate_no.ilike.${p},route_id.ilike.${p},route_name.ilike.${p},garage_name.ilike.${p}`,
+  const search = (req.nextUrl.searchParams.get("q") ?? "").trim();
+  try {
+    const rows = await q(
+      `select plate_no, vehicle_id, route_id, route_name, garage_name, operator
+         from vehicles
+        ${search ? "where plate_no ilike $1 or route_id ilike $1 or route_name ilike $1 or garage_name ilike $1" : ""}
+        order by plate_no
+        limit 200`,
+      search ? [likeContains(search)] : [],
     );
+    return NextResponse.json({ rows });
+  } catch (e) {
+    return fail(e);
   }
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ rows: data ?? [] });
 }
 
 // 추가
@@ -68,14 +53,16 @@ export async function POST(req: NextRequest) {
   const plate_no = String(body?.plate_no ?? "").trim();
   if (!plate_no) return NextResponse.json({ error: "차량번호(plate_no)는 필수입니다." }, { status: 400 });
 
-  const row: Record<string, string> = { plate_no };
-  for (const k of EDITABLE) row[k] = String(body?.[k] ?? "").trim();
-
-  const { sb, err } = adminClient();
-  if (err) return err;
-  const { error } = await sb!.from("vehicles").insert(row);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  const values = [plate_no, ...EDITABLE.map((k) => String(body?.[k] ?? "").trim())];
+  try {
+    await q(
+      `insert into vehicles (plate_no, ${EDITABLE.join(", ")}) values (${values.map((_, i) => `$${i + 1}`).join(", ")})`,
+      values,
+    );
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return fail(e);
+  }
 }
 
 // 수정
@@ -87,18 +74,23 @@ export async function PATCH(req: NextRequest) {
   const plate_no = String(body?.plate_no ?? "").trim();
   if (!plate_no) return NextResponse.json({ error: "plate_no 누락" }, { status: 400 });
 
-  const patch: Record<string, string | null> = {};
+  const cols: string[] = [];
+  const values: (string | null)[] = [];
   for (const k of EDITABLE) {
-    if (k in body) patch[k] = body[k] === "" ? (k === "route_id" ? null : "") : String(body[k]).trim();
+    if (k in body) {
+      values.push(body[k] === "" ? (k === "route_id" ? null : "") : String(body[k]).trim());
+      cols.push(`${k} = $${values.length}`);
+    }
   }
-  if (Object.keys(patch).length === 0)
-    return NextResponse.json({ error: "수정할 필드가 없습니다." }, { status: 400 });
+  if (cols.length === 0) return NextResponse.json({ error: "수정할 필드가 없습니다." }, { status: 400 });
 
-  const { sb, err } = adminClient();
-  if (err) return err;
-  const { error } = await sb!.from("vehicles").update(patch).eq("plate_no", plate_no);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  values.push(plate_no);
+  try {
+    await q(`update vehicles set ${cols.join(", ")} where plate_no = $${values.length}`, values);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return fail(e);
+  }
 }
 
 // 삭제
@@ -109,9 +101,10 @@ export async function DELETE(req: NextRequest) {
   const plate_no = (req.nextUrl.searchParams.get("plate") ?? "").trim();
   if (!plate_no) return NextResponse.json({ error: "plate 누락" }, { status: 400 });
 
-  const { sb, err } = adminClient();
-  if (err) return err;
-  const { error } = await sb!.from("vehicles").delete().eq("plate_no", plate_no);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  try {
+    await q("delete from vehicles where plate_no = $1", [plate_no]);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return fail(e);
+  }
 }
