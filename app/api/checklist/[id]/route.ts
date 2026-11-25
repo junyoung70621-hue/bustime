@@ -7,36 +7,28 @@
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
-import { getSupabase } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, q1, jsonb, isUuid } from "@/lib/db";
+import { putFile, removeFiles } from "@/lib/storage";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
-import { uploadCapturePublic, CAPTURE_BUCKET } from "@/lib/daepyecha/capture";
+import { uploadCapturePublic, removeCaptures } from "@/lib/daepyecha/capture";
 import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRelay";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
 
-function adminClient() {
-  try {
-    return { sb: getSupabaseAdmin(), err: null as NextResponse | null };
-  } catch {
-    return {
-      sb: null,
-      err: NextResponse.json({ error: "쓰기 기능 비활성: SUPABASE_SERVICE_ROLE_KEY 없음" }, { status: 503 }),
-    };
-  }
-}
+const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const notFound = () => NextResponse.json({ error: "기록 없음" }, { status: 404 });
+const badId = () => NextResponse.json({ error: "잘못된 id" }, { status: 400 });
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const sb = getSupabase();
-  const { data, error } = await sb.from("checklist_confirmations").select("*").eq("id", params.id).single();
-  if (error || !data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
-  return NextResponse.json({ row: data });
+  if (!isUuid(params.id)) return notFound();
+  const row = await q1("select * from checklist_confirmations where id = $1", [params.id]).catch(() => null);
+  if (!row) return notFound();
+  return NextResponse.json({ row });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
+  if (!isUuid(params.id)) return notFound();
 
   let form: FormData;
   try {
@@ -59,20 +51,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "수정자명을 입력하세요." }, { status: 400 });
   }
 
-  const { data: cur, error: curErr } = await sb!
-    .from("checklist_confirmations")
-    .select("pdf_path, teams_file")
-    .eq("id", params.id)
-    .single();
-  if (curErr || !cur) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
+  const cur = await q1<{ pdf_path: string; teams_file: string | null }>(
+    "select pdf_path, teams_file from checklist_confirmations where id = $1",
+    [params.id],
+  ).catch(() => null);
+  if (!cur) return notFound();
 
   const bytes = new Uint8Array(await pdf.arrayBuffer());
   // 같은 경로 덮어쓰기(upsert)는 스토리지/CDN 캐시가 옛 PDF를 계속 제공해 수정이 반영 안 됨.
   // → 매 수정마다 새 경로로 올리고 옛 파일을 지운다(캐시 충돌 원천 차단).
   const dir = cur.pdf_path.split("/").slice(0, -1).join("/");
   const newPath = `${dir ? `${dir}/` : ""}${params.id}-${crypto.randomUUID().slice(0, 8)}.pdf`;
-  const up = await sb!.storage.from(BUCKET).upload(newPath, bytes, { contentType: "application/pdf", upsert: false });
-  if (up.error) return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
+  try {
+    await putFile(BUCKET, newPath, bytes);
+  } catch (e) {
+    return NextResponse.json({ error: `PDF 업로드 실패: ${msg(e)}` }, { status: 500 });
+  }
 
   // 팀즈 업로드 메타/파일명 — 갱신 후 DB에 보관.
   const center = String(meta.center ?? "");
@@ -93,27 +87,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehCount) : checklistFileName(operator, installDate, tagless, vehNo);
   const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
-  const { error } = await sb!
-    .from("checklist_confirmations")
-    .update({
-      center: meta.center,
-      operator: meta.operator,
-      model: meta.model,
-      install_date: meta.install_date || null,
-      vehicle_numbers: meta.vehicle_numbers ?? "",
-      installer_name: meta.installer_name ?? "",
-      operator_signer_name: meta.operator_signer_name ?? "",
-      data: meta.data ?? {},
-      pdf_path: newPath,
-      teams_file: relayName,
-      modified_by: String(meta.modified_by).trim(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", params.id);
-  if (error) {
+  try {
+    await q(
+      `update checklist_confirmations set
+         center=$2, operator=$3, model=$4, install_date=$5, vehicle_numbers=$6, installer_name=$7,
+         operator_signer_name=$8, data=$9::jsonb, pdf_path=$10, teams_file=$11, modified_by=$12, updated_at=now()
+       where id=$1`,
+      [
+        params.id,
+        meta.center,
+        meta.operator,
+        meta.model,
+        meta.install_date || null,
+        meta.vehicle_numbers ?? "",
+        meta.installer_name ?? "",
+        meta.operator_signer_name ?? "",
+        jsonb(meta.data ?? {}),
+        newPath,
+        relayName,
+        String(meta.modified_by).trim(),
+      ],
+    );
+  } catch (e) {
     // DB 갱신 실패 시 새로 올린 파일은 고아 → 정리하고 옛 파일/경로 유지.
-    await sb!.storage.from(BUCKET).remove([newPath]);
-    return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+    await removeFiles(BUCKET, [newPath]);
+    return NextResponse.json({ error: `수정 실패: ${msg(e)}` }, { status: 500 });
   }
   // DB 저장 완료 → 사용자에겐 바로 응답하고, Teams 릴레이(캡처·메일·증빙사진)는 응답 후 백그라운드로.
   //   릴레이 함수들은 실패해도 throw하지 않고, 사진 임시본은 릴레이 성공 시에만 삭제(기존과 동일).
@@ -121,11 +119,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     (async () => {
       const t0 = Date.now();
       // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
-      if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
+      if (cur.pdf_path && cur.pdf_path !== newPath) await removeFiles(BUCKET, [cur.pdf_path]).catch(() => {});
 
       // 수도권/인천 캡쳐(JPG) 공개 URL 갱신(같은 id로 덮어써 최신 캡쳐 유지, 실패해도 비차단).
       const inlineThread = variant === "default" || variant === "incheon";
-      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, params.id, relayBytes) : "";
+      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(params.id, relayBytes) : "";
 
       // Teams 자동 업로드(이메일 릴레이) — 수정본.
       // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
@@ -150,7 +148,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
       // 증빙사진 재첨부(수도권·인천) — 수정 시 사진을 다시 올린 경우에만 동작.
       if (variant === "default" || variant === "incheon") {
-        await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+        await relayUploadedPhotos(normalizePhotoRefs(meta.photos_upload), {
           center,
           operator,
           vehicleNo: vehNo,
@@ -165,32 +163,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
+  if (!isUuid(params.id)) return badId();
   const hard = req.nextUrl.searchParams.get("hard") === "1";
 
-  if (!hard) {
-    const { error } = await sb!
-      .from("checklist_confirmations")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", params.id);
-    if (error) return NextResponse.json({ error: `삭제 실패: ${error.message}` }, { status: 500 });
-    return NextResponse.json({ ok: true, trashed: true });
+  try {
+    if (!hard) {
+      await q("update checklist_confirmations set deleted_at = now() where id = $1", [params.id]);
+      return NextResponse.json({ ok: true, trashed: true });
+    }
+    const cur = await q1<{ pdf_path: string }>("select pdf_path from checklist_confirmations where id = $1", [params.id]);
+    if (cur?.pdf_path) await removeFiles(BUCKET, [cur.pdf_path]);
+    // 공개 캡쳐(있으면)도 정리 — 고아 파일 방지. 없는 경로는 무시됨.
+    await removeCaptures([params.id]);
+    await q("delete from checklist_confirmations where id = $1", [params.id]);
+    return NextResponse.json({ ok: true, deleted: true });
+  } catch (e) {
+    return NextResponse.json({ error: `${hard ? "영구삭제" : "삭제"} 실패: ${msg(e)}` }, { status: 500 });
   }
-
-  const { data: cur } = await sb!.from("checklist_confirmations").select("pdf_path").eq("id", params.id).single();
-  if (cur?.pdf_path) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
-  // 공개 캡쳐(있으면)도 정리 — 고아 파일 방지. 없는 경로는 무시됨.
-  await sb!.storage.from(CAPTURE_BUCKET).remove([`${params.id}.jpg`]);
-  const { error } = await sb!.from("checklist_confirmations").delete().eq("id", params.id);
-  if (error) return NextResponse.json({ error: `영구삭제 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ ok: true, deleted: true });
 }
 
 export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
-  const { error } = await sb!.from("checklist_confirmations").update({ deleted_at: null }).eq("id", params.id);
-  if (error) return NextResponse.json({ error: `복원 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ ok: true, restored: true });
+  if (!isUuid(params.id)) return badId();
+  try {
+    await q("update checklist_confirmations set deleted_at = null where id = $1", [params.id]);
+    return NextResponse.json({ ok: true, restored: true });
+  } catch (e) {
+    return NextResponse.json({ error: `복원 실패: ${msg(e)}` }, { status: 500 });
+  }
 }

@@ -1,10 +1,10 @@
 // ─────────────────────────────────────────────────────────────
 // 증빙사진 릴레이 (서버 전용)
-//   클라이언트가 Storage에 직접 올린 임시 사진(meta.photos_upload)을 내려받아
+//   클라이언트가 /api/checklist/photos 로 올린 임시 사진(meta.photos_upload)을 서버 파일에서 읽어
 //   Teams로 릴레이한 뒤 임시본을 삭제한다. 사진은 보관 대상이 아니다.
 //   실패해도 저장은 비차단(증빙 누락이 본 저장을 막지 않게).
 // ─────────────────────────────────────────────────────────────
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { getFile, removeFiles } from "@/lib/storage";
 import { sendPhotoRelayMail } from "./teams";
 import { PHOTO_BUCKET, type PhotoRef } from "./photo-upload";
 
@@ -25,7 +25,6 @@ export function normalizePhotoRefs(raw: unknown): PhotoRef[] {
 }
 
 export async function relayUploadedPhotos(
-  sb: SupabaseClient,
   refs: PhotoRef[],
   info: { center: string; operator: string; vehicleNo: string; installDate: string },
 ): Promise<void> {
@@ -34,13 +33,12 @@ export async function relayUploadedPhotos(
   // 실패 시 임시본을 남겨두면 고아 파일이 되지만, 지우면 증빙이 영구 유실된다.
   let sent = false;
   try {
-    // 최대 8장 병렬 다운로드(순차면 장당 왕복 지연이 누적됨). 실패한 장은 건너뜀(기존과 동일).
+    // 최대 8장 병렬 읽기. 없는 장은 건너뜀(기존과 동일).
     const photos = (
       await Promise.all(
         refs.map(async (r) => {
-          const dl = await sb.storage.from(PHOTO_BUCKET).download(r.path);
-          if (dl.error || !dl.data) return null;
-          return { filename: r.filename, bytes: new Uint8Array(await dl.data.arrayBuffer()) };
+          const bytes = await getFile(PHOTO_BUCKET, r.path).catch(() => null);
+          return bytes ? { filename: r.filename, bytes } : null;
         }),
       )
     ).filter((p) => p !== null);
@@ -54,7 +52,7 @@ export async function relayUploadedPhotos(
   }
   // 임시 사진 정리(고아 방지). 실패 무시.
   try {
-    await sb.storage.from(PHOTO_BUCKET).remove(refs.map((r) => r.path));
+    await removeFiles(PHOTO_BUCKET, refs.map((r) => r.path));
   } catch {
     /* 정리 실패 무시 */
   }

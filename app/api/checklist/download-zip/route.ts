@@ -3,42 +3,39 @@
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, isUuid } from "@/lib/db";
+import { getFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
 
 export async function POST(req: NextRequest) {
-  let sb;
-  try {
-    sb = getSupabaseAdmin();
-  } catch {
-    return NextResponse.json({ error: "다운로드 비활성: SUPABASE_SERVICE_ROLE_KEY 없음" }, { status: 503 });
-  }
-
   let body: { ids?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "본문 JSON 오류" }, { status: 400 });
   }
-  const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string") : [];
+  const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string" && isUuid(x)) : [];
   if (ids.length === 0) return NextResponse.json({ error: "선택된 항목이 없습니다." }, { status: 400 });
 
-  const { data: rows, error } = await sb
-    .from("checklist_confirmations")
-    .select("id, operator, install_date, pdf_path, variant, teams_file")
-    .in("id", ids);
-  if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
-  if (!rows || rows.length === 0) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
+  let rows: { id: string; operator: string; install_date: string | null; pdf_path: string; variant: string; teams_file: string | null }[];
+  try {
+    rows = await q(
+      "select id, operator, install_date, pdf_path, variant, teams_file from checklist_confirmations where id = any($1::uuid[])",
+      [ids],
+    );
+  } catch (e) {
+    return NextResponse.json({ error: `조회 실패: ${e instanceof Error ? e.message : e}` }, { status: 500 });
+  }
+  if (rows.length === 0) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
 
   const zip = new JSZip();
   const used = new Set<string>();
   for (const r of rows) {
-    const dl = await sb.storage.from(BUCKET).download(r.pdf_path);
-    if (dl.error || !dl.data) continue;
-    const buf = new Uint8Array(await dl.data.arrayBuffer());
+    const buf = await getFile(BUCKET, r.pdf_path).catch(() => null);
+    if (!buf) continue;
     // 공용/고시 탭은 설치확인서 계열 문서 — 팀즈 파일명 첫 단어(설치확인서/철수확인서 등)를 라벨로 사용.
     const isConfirmDoc = r.variant === "gongyong" || r.variant === "gosi";
     const label = isConfirmDoc ? (r.teams_file || "").split(" ")[0] || "설치확인서" : "설치완료체크리스트";

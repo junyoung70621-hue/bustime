@@ -1,40 +1,31 @@
 // ─────────────────────────────────────────────────────────────
-// 체크리스트 PDF 다운로드: 60초 signed URL 리다이렉트 (파일명 "운수사 설치일.pdf")
+// 체크리스트 PDF 다운로드: 서버 파일을 한글 파일명으로 응답 (파일명 "운수사 설치일.pdf")
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q1, isUuid } from "@/lib/db";
+import { getFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const sb = getSupabase();
-  const { data, error } = await sb
-    .from("checklist_confirmations")
-    .select("pdf_path, operator, install_date, variant, teams_file")
-    .eq("id", params.id)
-    .single();
-  if (error || !data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
+  const data = isUuid(params.id)
+    ? await q1<{ pdf_path: string; operator: string; install_date: string | null; variant: string; teams_file: string | null }>(
+        "select pdf_path, operator, install_date, variant, teams_file from checklist_confirmations where id = $1",
+        [params.id],
+      ).catch(() => null)
+    : null;
+  if (!data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
 
-  let admin;
-  try {
-    admin = getSupabaseAdmin();
-  } catch {
-    return NextResponse.json({ error: "다운로드 비활성: SERVICE_ROLE_KEY 없음" }, { status: 503 });
-  }
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim();
   // 공용/고시 탭은 설치확인서 계열 문서 — 팀즈 파일명 첫 단어(설치확인서/철수확인서 등)를 라벨로 사용.
   const isConfirmDoc = data.variant === "gongyong" || data.variant === "gosi";
   const label = isConfirmDoc ? (data.teams_file || "").split(" ")[0] || "설치확인서" : "설치완료체크리스트";
   const filename = `${safe(data.operator || "체크리스트")} ${label}_${data.install_date || ""}`.trim() + ".pdf";
 
-  // 파일 바이트를 직접 받아 우리 응답으로 스트리밍한다.
-  // (Supabase signed URL 의 download 옵션은 한글 파일명을 %EC… 로 깨뜨림)
-  const dl = await admin.storage.from(BUCKET).download(data.pdf_path);
-  if (dl.error || !dl.data) return NextResponse.json({ error: "파일 다운로드 실패" }, { status: 500 });
+  const buf = await getFile(BUCKET, data.pdf_path).catch(() => null);
+  if (!buf) return NextResponse.json({ error: "파일 다운로드 실패" }, { status: 500 });
 
-  const buf = await dl.data.arrayBuffer();
   const ascii = filename.replace(/[^\x20-\x7E]/g, "_"); // 구형 브라우저용 폴백
   const encoded = encodeURIComponent(filename);
   return new NextResponse(buf, {

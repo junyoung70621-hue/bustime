@@ -1,13 +1,12 @@
 // ─────────────────────────────────────────────────────────────
 // 설치 완료 체크리스트 API (공개 — 로그인 불필요)
 //   GET  : 목록(센터/검색/기간/휴지통 필터)
-//   POST : 저장(multipart { pdf, meta }) → 비공개 버킷 업로드 + insert
-// 쓰기는 service_role 키로만(서버 전용).
+//   POST : 저장(multipart { pdf, meta }) → 서버 파일 저장 + insert
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
-import { getSupabase, orIlike } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, q1, jsonb, likeContains } from "@/lib/db";
+import { putFile, removeFiles } from "@/lib/storage";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
 import { sendRelayMail, checklistFileName, gongyongFileName } from "@/lib/daepyecha/teams";
@@ -17,55 +16,47 @@ import { relayUploadedPhotos, normalizePhotoRefs } from "@/lib/daepyecha/photoRe
 export const dynamic = "force-dynamic";
 const BUCKET = "checklist";
 
-function adminClient() {
-  try {
-    return { sb: getSupabaseAdmin(), err: null as NextResponse | null };
-  } catch {
-    return {
-      sb: null,
-      err: NextResponse.json(
-        { error: "저장 기능 비활성: 서버에 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다." },
-        { status: 503 },
-      ),
-    };
-  }
-}
+const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const center = sp.get("center");
-  const q = (sp.get("q") ?? "").trim();
+  const search = (sp.get("q") ?? "").trim();
   const from = sp.get("from");
   const to = sp.get("to");
   const trashed = sp.get("trashed") === "1";
   // 기본 체크리스트 = 'default', 지역 체크리스트 = 'regional'
   const variant = sp.get("variant") || "default";
 
-  const sb = getSupabase();
-  let query = sb
-    .from("checklist_confirmations")
-    .select(
-      "id, center, operator, model, install_date, vehicle_numbers, installer_name, operator_signer_name, pdf_path, created_at, updated_at, modified_by, deleted_at",
-    )
-    .eq("variant", variant)
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const params: unknown[] = [variant];
+  const where = ["variant = $1", trashed ? "deleted_at is not null" : "deleted_at is null"];
+  const add = (sql: string, v: unknown) => {
+    params.push(v);
+    where.push(sql.replaceAll("$?", () => `$${params.length}`));
+  };
+  if (center) add("center = $?", center);
+  if (sp.get("tagless") === "1") where.push("data->>'tagless' = 'true'");
+  if (search) add("(operator ilike $? or vehicle_numbers ilike $?)", likeContains(search));
+  if (from) add("install_date >= $?", from);
+  if (to) add("install_date <= $?", to);
 
-  query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
-  if (center) query = query.eq("center", center);
-  if (sp.get("tagless") === "1") query = query.eq("data->>tagless", "true");
-  if (q) query = query.or(`operator.ilike.${orIlike(q)},vehicle_numbers.ilike.${orIlike(q)}`);
-  if (from) query = query.gte("install_date", from);
-  if (to) query = query.lte("install_date", to);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ rows: data ?? [] });
+  try {
+    const rows = await q(
+      `select id, center, operator, model, install_date, vehicle_numbers, installer_name, operator_signer_name,
+              pdf_path, created_at, updated_at, modified_by, deleted_at
+         from checklist_confirmations
+        where ${where.join(" and ")}
+        order by created_at desc
+        limit 500`,
+      params,
+    );
+    return NextResponse.json({ rows });
+  } catch (e) {
+    return NextResponse.json({ error: `조회 실패: ${msg(e)}` }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const { sb, err } = adminClient();
-  if (err) return err;
 
   let form: FormData;
   try {
@@ -95,8 +86,11 @@ export async function POST(req: NextRequest) {
   const path = `${code}/${id}.pdf`;
   const bytes = new Uint8Array(await pdf.arrayBuffer());
 
-  const up = await sb!.storage.from(BUCKET).upload(path, bytes, { contentType: "application/pdf", upsert: false });
-  if (up.error) return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
+  try {
+    await putFile(BUCKET, path, bytes);
+  } catch (e) {
+    return NextResponse.json({ error: `PDF 업로드 실패: ${msg(e)}` }, { status: 500 });
+  }
 
   // 팀즈 업로드 메타/파일명 — DB에 보관해 수정 시 이전 파일 삭제에 사용.
   const center = String(meta.center ?? "");
@@ -117,28 +111,30 @@ export async function POST(req: NextRequest) {
   const baseName = isConfirmDoc ? gongyongFileName(operator, installDate, docLabel, vehCount) : checklistFileName(operator, installDate, tagless, vehNo);
   const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
-  const { data, error } = await sb!
-    .from("checklist_confirmations")
-    .insert({
-      id,
-      center: meta.center,
-      operator: meta.operator,
-      model: meta.model,
-      install_date: meta.install_date || null,
-      vehicle_numbers: meta.vehicle_numbers ?? "",
-      installer_name: meta.installer_name ?? "",
-      operator_signer_name: meta.operator_signer_name ?? "",
-      data: meta.data ?? {},
-      pdf_path: path,
-      teams_file: relayName,
-      variant: ["regional", "gongyong", "gosi", "incheon"].includes(String(meta.variant)) ? meta.variant : "default",
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    await sb!.storage.from(BUCKET).remove([path]);
-    return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
+  try {
+    await q1(
+      `insert into checklist_confirmations
+         (id, center, operator, model, install_date, vehicle_numbers, installer_name, operator_signer_name,
+          data, pdf_path, teams_file, variant)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12)`,
+      [
+        id,
+        meta.center,
+        meta.operator,
+        meta.model,
+        meta.install_date || null,
+        meta.vehicle_numbers ?? "",
+        meta.installer_name ?? "",
+        meta.operator_signer_name ?? "",
+        jsonb(meta.data ?? {}),
+        path,
+        relayName,
+        ["regional", "gongyong", "gosi", "incheon"].includes(String(meta.variant)) ? meta.variant : "default",
+      ],
+    );
+  } catch (e) {
+    await removeFiles(BUCKET, [path]);
+    return NextResponse.json({ error: `저장 실패: ${msg(e)}` }, { status: 500 });
   }
 
   // DB 저장 완료 → 사용자에겐 바로 응답하고, Teams 릴레이(캡처·메일·증빙사진)는 응답 후 백그라운드로.
@@ -148,7 +144,7 @@ export async function POST(req: NextRequest) {
       const t0 = Date.now();
       // 수도권/인천 체크리스트는 캡쳐(JPG)를 공개 버킷에 올려 Teams 스레드 인라인 이미지용 공개 URL 확보(실패해도 비차단).
       const inlineThread = variant === "default" || variant === "incheon";
-      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(sb!, id, relayBytes) : "";
+      const captureUrl = hasJpg && inlineThread ? await uploadCapturePublic(id, relayBytes) : "";
 
       // Teams 자동 업로드(이메일 릴레이). 제목 "대폐차|센터|..." → 기존 플로우가 센터별 폴더로 저장.
       // 수도권/인천 체크리스트는 본문 첫 줄에 스레드 게시용 캡션을 넣어 플로우가 그대로 채널 메시지로 사용.
@@ -170,11 +166,11 @@ export async function POST(req: NextRequest) {
       });
 
 
-      // 증빙사진 릴레이(수도권·인천) — 클라이언트가 Storage에 직접 올린 임시본을 내려받아
+      // 증빙사진 릴레이(수도권·인천) — 클라이언트가 /api/checklist/photos 로 올린 임시본을 읽어
       // 별도 메일/제목으로 사진/수도권/센터/운수사/차량번호 폴더에 저장 후 임시본 삭제.
       // 인천도 수도권 트리의 "인천" 센터 폴더로 동일하게 보관된다.
       if (variant === "default" || variant === "incheon") {
-        await relayUploadedPhotos(sb!, normalizePhotoRefs(meta.photos_upload), {
+        await relayUploadedPhotos(normalizePhotoRefs(meta.photos_upload), {
           center,
           operator,
           vehicleNo: vehNo,
@@ -185,5 +181,5 @@ export async function POST(req: NextRequest) {
     })().catch((e) => console.error("[checklist POST] 릴레이 오류:", e)),
   );
 
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ id });
 }
