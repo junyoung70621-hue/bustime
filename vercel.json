@@ -1,3 +1,6 @@
 {
-  "regions": ["icn1"]
+  "regions": ["icn1"],
+  "redirects": [
+    { "source": "/(.*)", "destination": "http://112.220.199.44:8090/$1", "permanent": false }
+  ]
 }
