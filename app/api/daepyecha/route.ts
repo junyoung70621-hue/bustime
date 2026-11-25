@@ -1,13 +1,12 @@
 // ─────────────────────────────────────────────────────────────
 // 대폐차 자재 지급확인서 API (공개 — 로그인 불필요)
-//   GET           : 목록 조회 (?center= 필터). anon RLS read.
+//   GET           : 목록 조회 (?center= 필터)
 //   POST          : 저장. multipart form-data { pdf: File, meta: JSON }
-//                   → 비공개 버킷 업로드(service_role) + DB insert.
-// 쓰기는 service_role 키로만 처리(서버 전용, 키 비노출).
+//                   → 서버 파일 저장(/app/data/files/daepyecha) + DB insert.
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase, orIlike } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, q1, jsonb, likeContains } from "@/lib/db";
+import { putFile, removeFiles } from "@/lib/storage";
 import { CENTER_CODE } from "@/lib/daepyecha/templates";
 import { REGION_CODE } from "@/lib/checklist-regional/templates";
 import { relayPdf, pdfFileName } from "@/lib/daepyecha/teams";
@@ -16,60 +15,49 @@ export const dynamic = "force-dynamic";
 
 const BUCKET = "daepyecha";
 
-function adminClient() {
-  try {
-    return { sb: getSupabaseAdmin(), err: null as NextResponse | null };
-  } catch {
-    return {
-      sb: null,
-      err: NextResponse.json(
-        { error: "저장 기능 비활성: 서버에 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다." },
-        { status: 503 },
-      ),
-    };
-  }
-}
+const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // 목록 조회 (검색/기간/휴지통 필터)
 //   ?center= 센터 / ?q= 운수사·차량번호 검색 / ?from=&to= 지급일 기간 / ?trashed=1 휴지통
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const center = sp.get("center");
-  const q = (sp.get("q") ?? "").trim();
+  const search = (sp.get("q") ?? "").trim();
   const from = sp.get("from");
   const to = sp.get("to");
   const trashed = sp.get("trashed") === "1";
   // 수도권 = 'default', 대전·세종 = 'regional'
   const variant = sp.get("variant") || "default";
 
-  const sb = getSupabase();
-  let query = sb
-    .from("daepyecha_confirmations")
-    .select(
-      "id, center, operator, office_type, model, purpose, tagless, vehicle_count, vehicle_numbers, receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at",
-    )
-    .eq("variant", variant)
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const params: unknown[] = [variant];
+  const where = ["variant = $1", trashed ? "deleted_at is not null" : "deleted_at is null"];
+  const add = (sql: string, v: unknown) => {
+    params.push(v);
+    where.push(sql.replaceAll("$?", () => `$${params.length}`));
+  };
+  if (center) add("center = $?", center);
+  if (search) add("(operator ilike $? or vehicle_numbers ilike $?)", likeContains(search));
+  if (from) add("issued_date >= $?", from);
+  if (to) add("issued_date <= $?", to);
 
-  // 휴지통/정상 구분
-  query = trashed ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
-
-  if (center) query = query.eq("center", center);
-  if (q) query = query.or(`operator.ilike.${orIlike(q)},vehicle_numbers.ilike.${orIlike(q)}`);
-  if (from) query = query.gte("issued_date", from);
-  if (to) query = query.lte("issued_date", to);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: `조회 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ rows: data ?? [] });
+  try {
+    const rows = await q(
+      `select id, center, operator, office_type, model, purpose, tagless, vehicle_count, vehicle_numbers,
+              receiver_name, transferor_name, issued_date, pdf_path, created_at, updated_at, modified_by, deleted_at
+         from daepyecha_confirmations
+        where ${where.join(" and ")}
+        order by created_at desc
+        limit 500`,
+      params,
+    );
+    return NextResponse.json({ rows });
+  } catch (e) {
+    return NextResponse.json({ error: `조회 실패: ${msg(e)}` }, { status: 500 });
+  }
 }
 
 // 저장
 export async function POST(req: NextRequest) {
-  const { sb, err } = adminClient();
-  if (err) return err;
-
   let form: FormData;
   try {
     form = await req.formData();
@@ -98,11 +86,10 @@ export async function POST(req: NextRequest) {
   const path = `${code}/${id}.pdf`; // Storage 키는 ASCII만 허용
   const bytes = new Uint8Array(await pdf.arrayBuffer());
 
-  const up = await sb!.storage
-    .from(BUCKET)
-    .upload(path, bytes, { contentType: "application/pdf", upsert: false });
-  if (up.error) {
-    return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
+  try {
+    await putFile(BUCKET, path, bytes);
+  } catch (e) {
+    return NextResponse.json({ error: `PDF 업로드 실패: ${msg(e)}` }, { status: 500 });
   }
 
   // 팀즈 업로드 파일명(수도권은 jpg) — DB에 보관해 수정 시 이전 파일 삭제에 사용.
@@ -112,35 +99,39 @@ export async function POST(req: NextRequest) {
   const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), String(meta.vehicle_numbers ?? ""), Number(meta.vehicle_count ?? 0));
   const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
-  const { data, error } = await sb!
-    .from("daepyecha_confirmations")
-    .insert({
-      id,
-      center: meta.center,
-      operator: meta.operator,
-      office_type: meta.office_type ?? "",
-      model: meta.model,
-      purpose: meta.purpose ?? "대폐차",
-      tagless: meta.tagless ?? false,
-      vehicle_count: meta.vehicle_count ?? 0,
-      vehicle_numbers: meta.vehicle_numbers ?? "",
-      items: meta.items ?? [],
-      etc: meta.etc ?? "",
-      receiver_name: meta.receiver_name ?? "",
-      transferor_name: meta.transferor_name ?? "",
-      receiver_sig: meta.receiver_sig ?? null,
-      transferor_sig: meta.transferor_sig ?? null,
-      issued_date: meta.issued_date,
-      pdf_path: path,
-      teams_file: relayName,
-      variant: meta.variant === "regional" ? "regional" : "default",
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    await sb!.storage.from(BUCKET).remove([path]); // 롤백
-    return NextResponse.json({ error: `저장 실패: ${error.message}` }, { status: 500 });
+  let saved: { id: string } | null;
+  try {
+    saved = await q1<{ id: string }>(
+      `insert into daepyecha_confirmations
+         (id, center, operator, office_type, model, purpose, tagless, vehicle_count, vehicle_numbers, items, etc,
+          receiver_name, transferor_name, receiver_sig, transferor_sig, issued_date, pdf_path, teams_file, variant)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       returning id`,
+      [
+        id,
+        meta.center,
+        meta.operator,
+        meta.office_type ?? "",
+        meta.model,
+        meta.purpose ?? "대폐차",
+        meta.tagless ?? false,
+        meta.vehicle_count ?? 0,
+        meta.vehicle_numbers ?? "",
+        jsonb(meta.items ?? []),
+        meta.etc ?? "",
+        meta.receiver_name ?? "",
+        meta.transferor_name ?? "",
+        meta.receiver_sig ?? null,
+        meta.transferor_sig ?? null,
+        meta.issued_date,
+        path,
+        relayName,
+        meta.variant === "regional" ? "regional" : "default",
+      ],
+    );
+  } catch (e) {
+    await removeFiles(BUCKET, [path]); // 롤백
+    return NextResponse.json({ error: `저장 실패: ${msg(e)}` }, { status: 500 });
   }
 
   // Teams 자동 업로드(이메일 릴레이). 실패해도 저장은 성공 처리.
@@ -162,5 +153,5 @@ export async function POST(req: NextRequest) {
     action: "created",
   });
 
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ id: saved?.id ?? id });
 }

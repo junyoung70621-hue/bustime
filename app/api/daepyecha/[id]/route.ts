@@ -2,49 +2,33 @@
 // 대폐차 확인서 단건 API
 //   GET    : 단건 전체 조회(items 포함) — 수정 화면 로딩용
 //   PUT    : 수정(새 PDF + meta + modified_by 필수) → updated_at 갱신
-//   DELETE : 휴지통 이동(soft). ?hard=1 이면 영구삭제(스토리지 파일 포함)
+//   DELETE : 휴지통 이동(soft). ?hard=1 이면 영구삭제(서버 파일 포함)
 //   PATCH  : 휴지통에서 복원(deleted_at=null)
-// 쓰기는 service_role 키로만 처리(서버 전용).
 // ─────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { q, q1, jsonb, isUuid } from "@/lib/db";
+import { putFile, removeFiles } from "@/lib/storage";
 import { relayPdf, pdfFileName } from "@/lib/daepyecha/teams";
 
 export const dynamic = "force-dynamic";
 
 const BUCKET = "daepyecha";
 
-function adminClient() {
-  try {
-    return { sb: getSupabaseAdmin(), err: null as NextResponse | null };
-  } catch {
-    return {
-      sb: null,
-      err: NextResponse.json(
-        { error: "쓰기 기능 비활성: 서버에 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다." },
-        { status: 503 },
-      ),
-    };
-  }
-}
+const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const notFound = () => NextResponse.json({ error: "기록 없음" }, { status: 404 });
+const badId = () => NextResponse.json({ error: "잘못된 id" }, { status: 400 });
 
 // 단건 전체 조회(수정 화면용)
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const sb = getSupabase();
-  const { data, error } = await sb
-    .from("daepyecha_confirmations")
-    .select("*")
-    .eq("id", params.id)
-    .single();
-  if (error || !data) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
-  return NextResponse.json({ row: data });
+  if (!isUuid(params.id)) return notFound();
+  const row = await q1("select * from daepyecha_confirmations where id = $1", [params.id]).catch(() => null);
+  if (!row) return notFound();
+  return NextResponse.json({ row });
 }
 
 // 수정 (PDF 재생성 + 메타 갱신, 수정자명 필수)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
+  if (!isUuid(params.id)) return notFound();
 
   let form: FormData;
   try {
@@ -69,23 +53,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   // 기존 pdf_path + 이전 팀즈 파일명 확인
-  const { data: cur, error: curErr } = await sb!
-    .from("daepyecha_confirmations")
-    .select("pdf_path, teams_file")
-    .eq("id", params.id)
-    .single();
-  if (curErr || !cur) return NextResponse.json({ error: "기록 없음" }, { status: 404 });
+  const cur = await q1<{ pdf_path: string; teams_file: string | null }>(
+    "select pdf_path, teams_file from daepyecha_confirmations where id = $1",
+    [params.id],
+  ).catch(() => null);
+  if (!cur) return notFound();
 
   const bytes = new Uint8Array(await pdf.arrayBuffer());
   // 같은 경로 덮어쓰기(upsert)는 스토리지/CDN 캐시가 옛 PDF를 계속 제공해 수정이 반영 안 됨.
   // → 매 수정마다 새 경로로 올리고 옛 파일을 지운다(캐시 충돌 원천 차단).
   const dir = cur.pdf_path.split("/").slice(0, -1).join("/");
   const newPath = `${dir ? `${dir}/` : ""}${params.id}-${crypto.randomUUID().slice(0, 8)}.pdf`;
-  const up = await sb!.storage
-    .from(BUCKET)
-    .upload(newPath, bytes, { contentType: "application/pdf", upsert: false });
-  if (up.error) {
-    return NextResponse.json({ error: `PDF 업로드 실패: ${up.error.message}` }, { status: 500 });
+  try {
+    await putFile(BUCKET, newPath, bytes);
+  } catch (e) {
+    return NextResponse.json({ error: `PDF 업로드 실패: ${msg(e)}` }, { status: 500 });
   }
 
   // 새 팀즈 파일명(수도권은 jpg) — 갱신 후 DB에 보관.
@@ -95,38 +77,43 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const baseName = pdfFileName(String(meta.operator ?? ""), String(meta.issued_date ?? ""), Boolean(meta.tagless), String(meta.vehicle_numbers ?? ""), Number(meta.vehicle_count ?? 0));
   const relayName = hasJpg ? baseName.replace(/\.pdf$/i, ".jpg") : baseName;
 
-  const { error } = await sb!
-    .from("daepyecha_confirmations")
-    .update({
-      center: meta.center,
-      operator: meta.operator,
-      office_type: meta.office_type ?? "",
-      model: meta.model,
-      purpose: meta.purpose ?? "대폐차",
-      tagless: meta.tagless ?? false,
-      vehicle_count: meta.vehicle_count ?? 0,
-      vehicle_numbers: meta.vehicle_numbers ?? "",
-      items: meta.items ?? [],
-      etc: meta.etc ?? "",
-      receiver_name: meta.receiver_name ?? "",
-      transferor_name: meta.transferor_name ?? "",
-      receiver_sig: meta.receiver_sig ?? null,
-      transferor_sig: meta.transferor_sig ?? null,
-      issued_date: meta.issued_date,
-      pdf_path: newPath,
-      teams_file: relayName,
-      modified_by: String(meta.modified_by).trim(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", params.id);
-
-  if (error) {
+  try {
+    await q(
+      `update daepyecha_confirmations set
+         center=$2, operator=$3, office_type=$4, model=$5, purpose=$6, tagless=$7, vehicle_count=$8,
+         vehicle_numbers=$9, items=$10::jsonb, etc=$11, receiver_name=$12, transferor_name=$13,
+         receiver_sig=$14, transferor_sig=$15, issued_date=$16, pdf_path=$17, teams_file=$18,
+         modified_by=$19, updated_at=now()
+       where id=$1`,
+      [
+        params.id,
+        meta.center,
+        meta.operator,
+        meta.office_type ?? "",
+        meta.model,
+        meta.purpose ?? "대폐차",
+        meta.tagless ?? false,
+        meta.vehicle_count ?? 0,
+        meta.vehicle_numbers ?? "",
+        jsonb(meta.items ?? []),
+        meta.etc ?? "",
+        meta.receiver_name ?? "",
+        meta.transferor_name ?? "",
+        meta.receiver_sig ?? null,
+        meta.transferor_sig ?? null,
+        meta.issued_date,
+        newPath,
+        relayName,
+        String(meta.modified_by).trim(),
+      ],
+    );
+  } catch (e) {
     // DB 갱신 실패 시 새로 올린 파일은 고아 → 정리하고 옛 파일/경로 유지.
-    await sb!.storage.from(BUCKET).remove([newPath]);
-    return NextResponse.json({ error: `수정 실패: ${error.message}` }, { status: 500 });
+    await removeFiles(BUCKET, [newPath]);
+    return NextResponse.json({ error: `수정 실패: ${msg(e)}` }, { status: 500 });
   }
   // 갱신 성공 → 옛 PDF 삭제(실패해도 비차단).
-  if (cur.pdf_path && cur.pdf_path !== newPath) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
+  if (cur.pdf_path && cur.pdf_path !== newPath) await removeFiles(BUCKET, [cur.pdf_path]).catch(() => {});
 
   // Teams 자동 업로드(수정본, 이메일 릴레이). 실패해도 저장은 성공 처리.
   // replaceFile = 이전 파일명 → 플로우가 그 파일 삭제 후 새 파일 업로드.
@@ -154,39 +141,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 // 삭제: 기본은 휴지통 이동(soft), ?hard=1 이면 영구삭제
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
+  if (!isUuid(params.id)) return badId();
   const hard = req.nextUrl.searchParams.get("hard") === "1";
 
-  if (!hard) {
-    const { error } = await sb!
-      .from("daepyecha_confirmations")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", params.id);
-    if (error) return NextResponse.json({ error: `삭제 실패: ${error.message}` }, { status: 500 });
-    return NextResponse.json({ ok: true, trashed: true });
+  try {
+    if (!hard) {
+      await q("update daepyecha_confirmations set deleted_at = now() where id = $1", [params.id]);
+      return NextResponse.json({ ok: true, trashed: true });
+    }
+    // 영구삭제: 파일 → DB 행
+    const cur = await q1<{ pdf_path: string }>("select pdf_path from daepyecha_confirmations where id = $1", [params.id]);
+    if (cur?.pdf_path) await removeFiles(BUCKET, [cur.pdf_path]);
+    await q("delete from daepyecha_confirmations where id = $1", [params.id]);
+    return NextResponse.json({ ok: true, deleted: true });
+  } catch (e) {
+    return NextResponse.json({ error: `${hard ? "영구삭제" : "삭제"} 실패: ${msg(e)}` }, { status: 500 });
   }
-
-  // 영구삭제: 스토리지 파일 → DB 행
-  const { data: cur } = await sb!
-    .from("daepyecha_confirmations")
-    .select("pdf_path")
-    .eq("id", params.id)
-    .single();
-  if (cur?.pdf_path) await sb!.storage.from(BUCKET).remove([cur.pdf_path]);
-  const { error } = await sb!.from("daepyecha_confirmations").delete().eq("id", params.id);
-  if (error) return NextResponse.json({ error: `영구삭제 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ ok: true, deleted: true });
 }
 
 // 복원: 휴지통 → 정상
 export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { sb, err } = adminClient();
-  if (err) return err;
-  const { error } = await sb!
-    .from("daepyecha_confirmations")
-    .update({ deleted_at: null })
-    .eq("id", params.id);
-  if (error) return NextResponse.json({ error: `복원 실패: ${error.message}` }, { status: 500 });
-  return NextResponse.json({ ok: true, restored: true });
+  if (!isUuid(params.id)) return badId();
+  try {
+    await q("update daepyecha_confirmations set deleted_at = null where id = $1", [params.id]);
+    return NextResponse.json({ ok: true, restored: true });
+  } catch (e) {
+    return NextResponse.json({ error: `복원 실패: ${msg(e)}` }, { status: 500 });
+  }
 }

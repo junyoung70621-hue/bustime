@@ -38,7 +38,7 @@ export async function putFile(
 }
 
 /** 파일 읽기. 없으면 null. */
-export async function getFile(bucket: Bucket, key: string): Promise<Uint8Array | null> {
+export async function getFile(bucket: Bucket, key: string): Promise<Uint8Array<ArrayBuffer> | null> {
   const full = resolve(bucket, key);
   try {
     return new Uint8Array(await readFile(full));
