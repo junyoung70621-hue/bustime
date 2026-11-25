@@ -1,6 +1,8 @@
 # ─────────────────────────────────────────────────────────────
-# bustime(myapp) 서버 crontab — 등록: crontab deploy/crontab.txt
-#   (이미 다른 crontab 이 있으면 crontab -l 로 확인 후 이 줄들을 합쳐서 등록)
+# bustime(myapp) 서버 crontab
+#   ⚠️ 서버에 다른 앱(atmob, atplan) crontab 이 있으므로 덮어쓰지 말고 "맨 뒤에" 합친다:
+#     crontab -l > ~/crontab.bak && ( cat ~/crontab.bak; echo; cat deploy/crontab.txt ) | crontab -
+#   (CRON_TZ 는 아래 줄에만 적용 → 기존 작업 시각은 그대로. 되돌리기: crontab ~/crontab.bak)
 #   경로는 ~/bustime_atec 기준. 실행 기록은 ~/myapp-cron.log
 # ─────────────────────────────────────────────────────────────
 CRON_TZ=Asia/Seoul
@@ -8,8 +10,8 @@ SHELL=/bin/bash
 
 # 00:00 지난 운행일 앞차 기록 삭제
 0 0 * * *  cd $HOME/bustime_atec && docker compose exec -T web node scripts/purge-front-car.mjs >> $HOME/myapp-cron.log 2>&1
-# 03:00 DB·파일 백업 (14일 보관)
-0 3 * * *  $HOME/bustime_atec/deploy/backup.sh $HOME/bustime_atec >> $HOME/myapp-cron.log 2>&1
+# 03:40 DB·파일 백업 (14일 보관) — 03:00 atmob, 03:20 atplan 백업과 겹치지 않게
+40 3 * * * $HOME/bustime_atec/deploy/backup.sh $HOME/bustime_atec >> $HOME/myapp-cron.log 2>&1
 # 06:30 Supabase 깨우기 (예전 팀즈 캡처 이미지 유지용)
 30 6 * * * cd $HOME/bustime_atec && docker compose exec -T web node scripts/supabase-keepalive.mjs >> $HOME/myapp-cron.log 2>&1
 # 07:00 시내버스 앞차 아침 기록
